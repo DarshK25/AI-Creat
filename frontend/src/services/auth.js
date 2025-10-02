@@ -1,8 +1,10 @@
 import api from '../config/api'
 
+const BASE_URL = "/api/v1/auth"
+
 export const auth = {
     login: async(username, password) => {
-        const res = await api.post('/api/v1/auth/login', {
+        const res = await api.post(`${BASE_URL}/login`, {
             username,
             password
         })
@@ -11,7 +13,7 @@ export const auth = {
     logout: async()=>{
         const token = localStorage.getItem('token');
         if(token){
-            await api.post('/api/v1/auth/logout', {}, {
+            await api.post(`${BASE_URL}/logout`, {}, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }

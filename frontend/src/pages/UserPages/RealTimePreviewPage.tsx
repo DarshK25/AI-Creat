@@ -1,38 +1,119 @@
-import React, { useState} from 'react';
+import React, { useState, useEffect } from 'react';
 import '../../App.css';
+import { generation } from '../../services/generation';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
-// Mock data to represent the assets. In a real application, this would come from state or an API.
-const assetData = [
-  {
-    platform: 'Instagram',
-    fileCount: 8,
-    nsfwCount: 2,
-    assets: [
-      { id: 'insta-1', name: 'Tea Coffe_2025.PSD', type: 'Instagram Post', dimensions: '1080x1080', isNsfw: false },
-      { id: 'insta-2', name: 'Tea Coffe_2025.PSD', type: 'Instagram Story', dimensions: '1080x1920', isNsfw: false },
-      { id: 'insta-3', name: 'Lemon Tea.JPG', type: 'Instagram Post', dimensions: '1080x1080', isNsfw: false },
-      { id: 'insta-4', name: 'Lemon Tea.JPG', type: 'Instagram Story', dimensions: '1080x1920', isNsfw: false },
-      { id: 'insta-5', name: 'Ice Tea.PNG', type: 'Instagram Post', dimensions: '1080x1080', isNsfw: false },
-      { id: 'insta-6', name: 'Ice Tea.PNG', type: 'Instagram Story', dimensions: '1080x1920', isNsfw: false },
-      { id: 'insta-7', name: 'NSFW Content 1', type: 'Instagram Story', dimensions: '1080x1920', isNsfw: true },
-      { id: 'insta-8', name: 'NSFW Content 2', type: 'Instagram Story', dimensions: '1080x1920', isNsfw: true },
-    ],
-  },
-  { platform: 'Facebook', fileCount: 5, nsfwCount: 0, assets: [ /* ... more asset data ... */ ] },
-  { platform: 'Youtube', fileCount: 5, nsfwCount: 0, assets: [ /* ... more asset data ... */ ] },
-];
+interface GeneratedAsset {
+  id: string;
+  originalAssetId: string;
+  filename: string;
+  assetUrl: string;
+  platformName?: string;
+  formatName: string;
+  dimensions: {
+    width: number;
+    height: number;
+  };
+  isNsfw: boolean;
+}
+
+interface JobResults {
+  [platformName: string]: GeneratedAsset[];
+}
 
 const RealTimePreviewPage: React.FC = () => {
-  // State for managing UI elements
-  const [openAccordions, setOpenAccordions] = useState<string[]>(['Instagram']); // Instagram is open by default
-  const [selectedAssets, setSelectedAssets] = useState<string[]>(['insta-1']); // First asset is selected by default
+  const [selectedAssets, setSelectedAssets] = useState<string[]>([]);
   const [resolution, setResolution] = useState(72);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const jobId = searchParams.get('jobId') || '';
 
-  const toggleAccordion = (platform: string) => {
-    setOpenAccordions(prev =>
-      prev.includes(platform) ? prev.filter(p => p !== platform) : [...prev, platform]
-    );
+  // Job status and results
+  const [jobStatus, setJobStatus] = useState<string>('running');
+  const [jobProgress, setJobProgress] = useState<number>(0);
+  const [jobResults, setJobResults] = useState<JobResults>({});
+  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+
+  // UI state
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [groupBy, setGroupBy] = useState<'platform' | 'type'>('platform');
+  const [openPlatforms, setOpenPlatforms] = useState<string[]>([]);
+
+  const handleThemeToggle = () => {
+    setTheme(currentTheme => (currentTheme === 'dark' ? 'light' : 'dark'));
   };
+
+  // Flatten results for easier handling
+  const allAssets: GeneratedAsset[] = Object.values(jobResults).flat();
+
+  // Poll for job status and results
+  useEffect(() => {
+    if (!jobId) {
+      setError('No job ID provided');
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    let pollTimeout: number;
+
+    const pollJobStatus = async () => {
+      try {
+        const statusResponse = await generation.getJobStatus(jobId);
+
+        if (cancelled) return;
+
+        const status = statusResponse?.status || 'running';
+        const progress = statusResponse?.progress || 0;
+
+        setJobStatus(status);
+        setJobProgress(progress);
+
+        if (status === 'completed') {
+          // Job completed, get results
+          try {
+            const results = await generation.getJobResults(jobId);
+            if (!cancelled) {
+              setJobResults(results || {});
+              setLoading(false);
+              // Auto-expand first platform
+              const firstPlatform = Object.keys(results || {})[0];
+              if (firstPlatform) {
+                setOpenPlatforms([firstPlatform]);
+              }
+            }
+          } catch (resultsError) {
+            console.error('Failed to get job results:', resultsError);
+            setError('Failed to load generated assets');
+            setLoading(false);
+          }
+        } else if (status === 'failed') {
+          setError('Generation job failed');
+          setLoading(false);
+        } else {
+          // Still running, continue polling
+          pollTimeout = setTimeout(pollJobStatus, 2000);
+        }
+      } catch (statusError) {
+        console.error('Failed to get job status:', statusError);
+        if (!cancelled) {
+          // Retry after longer delay on error
+          pollTimeout = setTimeout(pollJobStatus, 5000);
+        }
+      }
+    };
+
+    setLoading(true);
+    pollJobStatus();
+
+    return () => {
+      cancelled = true;
+      if (pollTimeout) {
+        clearTimeout(pollTimeout);
+      }
+    };
+  }, [jobId]);
 
   const handleAssetSelect = (id: string) => {
     setSelectedAssets(prev =>
@@ -40,13 +121,93 @@ const RealTimePreviewPage: React.FC = () => {
     );
   };
 
-  const [theme, setTheme] = useState('dark'); // 'dark' is the initial state
-  
-    const handleThemeToggle = () => {
-      setTheme(currentTheme => (currentTheme === 'dark' ? 'light' : 'dark'));
-    };
+  const handleSelectAll = () => {
+    if (selectedAssets.length === allAssets.length) {
+      setSelectedAssets([]);
+    } else {
+      setSelectedAssets(allAssets.map(asset => asset.id));
+    }
+  };
 
-    
+  const togglePlatform = (platform: string) => {
+    setOpenPlatforms(prev =>
+      prev.includes(platform)
+        ? prev.filter(p => p !== platform)
+        : [...prev, platform]
+    );
+  };
+
+  const formatDimensions = (dimensions: { width: number; height: number }) => {
+    return `${dimensions.width} × ${dimensions.height}`;
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="preview-page-container">
+        <header className="navbar">
+          <div className="navbar-left">
+            <div className="navbar-logo">
+              <svg className="logo-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 20 L80 80 M80 20 L20 80" stroke="currentColor" strokeWidth="12" strokeLinecap="round" />
+              </svg>
+              <span className="logo-text">AI CREAT</span>
+            </div>
+          </div>
+          <div className="navbar-right">
+            <button onClick={() => navigate('/user-dashboard')} className="icon-button">
+              <i className="fas fa-home"></i>
+            </button>
+          </div>
+        </header>
+        <main className="preview-main-content">
+          <div className="generation-status">
+            <h2>Generating Your Assets...</h2>
+            <div className="progress-bar">
+              <div
+                className="progress-fill"
+                style={{ width: `${jobProgress}%` }}
+              ></div>
+            </div>
+            <p>Status: {jobStatus} ({jobProgress}%)</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="preview-page-container">
+        <header className="navbar">
+          <div className="navbar-left">
+            <div className="navbar-logo">
+              <svg className="logo-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 20 L80 80 M80 20 L20 80" stroke="currentColor" strokeWidth="12" strokeLinecap="round" />
+              </svg>
+              <span className="logo-text">AI CREAT</span>
+            </div>
+          </div>
+          <div className="navbar-right">
+            <button onClick={() => navigate('/user-dashboard')} className="icon-button">
+              <i className="fas fa-home"></i>
+            </button>
+          </div>
+        </header>
+        <main className="preview-main-content">
+          <div className="error-state">
+            <h2>Generation Failed</h2>
+            <p>{error}</p>
+            <button onClick={() => navigate('/user-dashboard')} className="action-button primary">
+              Back to Dashboard
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="preview-page-container">
       <header className="navbar">
@@ -58,138 +219,142 @@ const RealTimePreviewPage: React.FC = () => {
             <span className="logo-text">AI CREAT</span>
           </div>
           <nav className="navbar-nav">
+            <a href="/user-dashboard" className="nav-item">Dashboard</a>
             <a href="#" className="nav-item active">Recreate</a>
             <a href="#" className="nav-item">Project History</a>
           </nav>
         </div>
         <div className="navbar-right">
-  {/* Light/Dark Mode Toggle */}
-  <button 
-            className="icon-button" 
-            onClick={handleThemeToggle} 
+          <button
+            className="icon-button"
+            onClick={handleThemeToggle}
             aria-label="Toggle theme"
           >
             <i className={theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon'}></i>
-  </button>
-  
-  {/* Notifications Button */}
-  <button className="icon-button">
-    <i className="fas fa-bell"></i>
-  </button>
-  
-  {/* Settings Button */}
-  <button className="icon-button">
-    <i className="fas fa-cog"></i>
-  </button>
-  
-  {/* User Profile Avatar */}
-  <div className="user-profile">
-    <img 
-      src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=880&q=80" 
-      alt="User" 
-      className="profile-avatar" 
-    />
-  </div>
-</div>
+          </button>
+          <button className="icon-button">
+            <i className="fas fa-bell"></i>
+          </button>
+          <button className="icon-button">
+            <i className="fas fa-cog"></i>
+          </button>
+          <div className="user-profile">
+            <img
+              src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?ixlib=rb-4.0.3&auto=format&fit=crop&w=880&q=80"
+              alt="User"
+              className="profile-avatar"
+            />
+          </div>
+        </div>
       </header>
 
       <main className="preview-main-content">
-        {/* Top Header and Actions */}
         <div className="preview-header">
-          <h1>Real-Time AI Preview</h1>
+          <h1>Generated Assets ({allAssets.length} items)</h1>
           <div className="preview-actions">
             <button className="action-button secondary">Preview</button>
-            <button className="action-button primary">Batch Download</button>
+            <button
+              className="action-button primary"
+              disabled={selectedAssets.length === 0}
+            >
+              Download Selected ({selectedAssets.length})
+            </button>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="preview-tabs">
-          <button className="tab-item active">Resizing</button>
-          <button className="tab-item">Repurposing</button>
-        </div>
-        
         <div className="preview-body">
-          {/* Left Side: Generated Assets */}
           <div className="generated-assets-section">
             <div className="assets-toolbar">
               <label className="custom-checkbox-label">
-                <input type="checkbox" />
+                <input
+                  type="checkbox"
+                  checked={selectedAssets.length === allAssets.length && allAssets.length > 0}
+                  onChange={handleSelectAll}
+                />
                 <span className="custom-checkbox"></span>
-                Select All
+                Select All ({selectedAssets.length} of {allAssets.length})
               </label>
               <div className="group-by-wrapper">
                 <span>Group By</span>
-                <select defaultValue="platform">
+                <select
+                  value={groupBy}
+                  onChange={(e) => setGroupBy(e.target.value as 'platform' | 'type')}
+                >
                   <option value="platform">Platform</option>
                   <option value="type">Type</option>
                 </select>
               </div>
             </div>
 
-            {assetData.map(({ platform, fileCount, nsfwCount, assets }) => (
-              <div key={platform} className={`accordion-item ${openAccordions.includes(platform) ? 'is-open' : ''}`}>
-                <button className="accordion-header" onClick={() => toggleAccordion(platform)}>
-                  <div className="accordion-header-left">
-                    <label className="custom-checkbox-label" onClick={(e) => e.stopPropagation()}>
-                      <input type="checkbox" />
-                      <span className="custom-checkbox"></span>
-                    </label>
-                    <span className="platform-name">{platform}</span>
-                    <span className="file-count-badge">({fileCount} generated file)</span>
-                    {nsfwCount > 0 && (
-                      <div className="nsfw-warning-badge">
-                        <i className="fas fa-exclamation-triangle"></i> {nsfwCount} NSFW content detected!
+            {Object.keys(jobResults).length === 0 ? (
+              <div className="empty-state">
+                <p>No assets generated yet.</p>
+              </div>
+            ) : (
+              <div className="platforms-container">
+                {Object.entries(jobResults).map(([platformName, assets]) => (
+                  <div key={platformName} className="platform-section">
+                    <div
+                      className="platform-header"
+                      onClick={() => togglePlatform(platformName)}
+                    >
+                      <h3>{platformName} ({assets.length} items)</h3>
+                      <i className={`fas fa-chevron-${openPlatforms.includes(platformName) ? 'up' : 'down'}`}></i>
+                    </div>
+
+                    {openPlatforms.includes(platformName) && (
+                      <div className="asset-grid">
+                        {assets.map(asset => (
+                          <div
+                            key={asset.id}
+                            className={`asset-card ${selectedAssets.includes(asset.id) ? 'is-selected' : ''} ${asset.isNsfw ? 'is-nsfw' : ''}`}
+                          >
+                            {!asset.isNsfw ? (
+                              <>
+                                <div className="card-header">
+                                  <label className="custom-checkbox-label">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedAssets.includes(asset.id)}
+                                      onChange={() => handleAssetSelect(asset.id)}
+                                    />
+                                    <span className="custom-checkbox"></span>
+                                  </label>
+                                  <span className="asset-name">{asset.formatName}</span>
+                                </div>
+                                <div className="asset-thumbnail">
+                                  <img
+                                    src={asset.assetUrl}
+                                    alt={asset.formatName}
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                  />
+                                  <button className="edit-more-button">Edit More</button>
+                                </div>
+                                <div className="asset-footer">
+                                  <span className="asset-type">{asset.formatName}</span>
+                                  <span className="asset-dims">{formatDimensions(asset.dimensions)}</span>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="nsfw-content">
+                                <i className="fas fa-eye-slash nsfw-icon"></i>
+                                <p className="nsfw-title">NSFW Content!</p>
+                                <p className="nsfw-subtitle">Flagged Content Alerts</p>
+                                <button className="show-button">Show</button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
-                  <i className="fas fa-chevron-down chevron-icon"></i>
-                </button>
-                <div className="accordion-content">
-                  <div className="asset-grid">
-                    {assets.map(asset => (
-                      <div
-                        key={asset.id}
-                        className={`asset-card ${selectedAssets.includes(asset.id) ? 'is-selected' : ''} ${asset.isNsfw ? 'is-nsfw' : ''}`}
-                      >
-                        {!asset.isNsfw ? (
-                          <>
-                            <div className="card-header">
-                              <label className="custom-checkbox-label">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedAssets.includes(asset.id)}
-                                  onChange={() => handleAssetSelect(asset.id)}
-                                />
-                                <span className="custom-checkbox"></span>
-                              </label>
-                              <span className="asset-name">{asset.name}</span>
-                            </div>
-                            <div className="asset-thumbnail">
-                              <button className="edit-more-button">Edit More</button>
-                            </div>
-                            <div className="asset-footer">
-                              <span className="asset-type">{asset.type}</span>
-                              <span className="asset-dims">{asset.dimensions}</span>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="nsfw-content">
-                            <i className="fas fa-eye-slash nsfw-icon"></i>
-                            <p className="nsfw-title">NSFW Content!</p>
-                            <p className="nsfw-subtitle">Flagged Content Alerts</p>
-                            <button className="show-button">Show</button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
 
-          {/* Right Side: Adjust Resolution Sidebar */}
           <aside className="adjust-resolution-sidebar">
             <h3>Adjust Resolution</h3>
             <div className="resolution-previews">

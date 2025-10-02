@@ -17,6 +17,20 @@ class PreferencesUpdate(BaseModel):
     theme: Optional[str] = None
 
 
+@router.get("/me")
+async def get_current_user_profile(
+    current_user: User = Depends(get_current_user)
+):
+    """Get current user profile"""
+    return {
+        "id": str(current_user.id),
+        "username": current_user.username,
+        "email": current_user.email,
+        "role": current_user.role,
+        "preferences": current_user.preferences
+    }
+
+
 @router.put("/me/preferences")
 async def update_user_preferences(
     preferences: PreferencesUpdate,

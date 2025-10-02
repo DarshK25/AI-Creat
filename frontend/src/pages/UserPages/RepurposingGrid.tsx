@@ -1,38 +1,92 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { generation } from '../../services/generation';
 
-// Data for all platforms and their items.
-const repurposingData = [
-    { platform: 'Instagram', items: ['Instagram Post', 'Instagram Story', 'Carousel Posts', 'Shop/Product Images', 'Ad specific sizes'] },
-    { platform: 'Youtube', items: ['Youtube Banner', 'Youtube Thumbnail', 'Profile Picture', 'Lorem ipsum', 'Youtube Acme', 'Youtube Lorem'] },
-    { platform: 'Facebook', items: ['Facebook Story', 'Facebook Post', 'Carousel Posts', 'Shop/Product Images', 'Ad specific sizes'] },
-    { platform: 'Linkedin', items: ['Company Page Logo & Cover', 'Profile Picture', 'Post Images', 'Ad specific sizes', 'Article Link Images'] },
-    { platform: 'X', items: ['Profile Picture', 'Header Photo', 'In-Stream Photo', 'Card Images (Website, App)', 'Ad specific sizes'] },
-    { platform: 'Pinterest', items: ['Standard Pin', 'Story Pins', 'Idea Pins', 'Lorem ipsum', 'Acme Pin', 'Lorem ipsum Ad'] },
-    { platform: 'TikTok', items: ['Profile Picture', 'In-feed Video Thumbnails', 'Consideration for overlay elements', 'Shop/Product Images', 'Ad specific sizes'] },
-    { platform: 'Acme Platform', items: ['Company Page Logo & Cover', 'Profile Picture', 'Post Images', 'Ad specific sizes', 'Article Link Images'] },
-];
+interface AssetFormat {
+    id: string;
+    name: string;
+    platformId: string;
+    platformName: string;
+    width: number;
+    height: number;
+}
 
-// Generate a flat list of all possible item IDs for "Select All" functionality
-const allItemIds = repurposingData.flatMap(p => p.items.map(item => `${p.platform}-${item}`));
+interface PlatformData {
+    platform: string;
+    items: AssetFormat[];
+}
 
-const RepurposingGrid: React.FC = () => {
-    // --- LOGIC CHANGE 1: State is now an array of selected IDs ---
-    const [selectedItems, setSelectedItems] = useState<string[]>([
-        'Instagram-Instagram Post',
-        'Youtube-Youtube Banner',
-        'Facebook-Facebook Story',
-    ]);
+interface RepurposingGridProps {
+    onSelectionChange?: (selectedFormatIds: string[]) => void;
+    initialSelection?: string[];
+}
 
-    // --- LOGIC CHANGE 2: Handler now adds/removes IDs from the array ---
+const RepurposingGrid: React.FC<RepurposingGridProps> = ({
+    onSelectionChange,
+    initialSelection = []
+}) => {
+    const [repurposingData, setRepurposingData] = useState<PlatformData[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedItems, setSelectedItems] = useState<string[]>(initialSelection);
+
+    //Notifying parent componnt at selection changes
+    useEffect(() => {
+        onSelectionChange?.(selectedItems);
+    }, [selectedItems, onSelectionChange]);
+
+    useEffect(() => {
+        const fetchFormats = async () => {
+            try {
+                setLoading(true);
+                const response = await generation.getFormats();
+
+                // Group repurposing formats by platform
+                const platformMap = new Map<string, AssetFormat[]>();
+
+                response.repurposing?.forEach((format: AssetFormat) => {
+                    if (!platformMap.has(format.platformName)) {
+                        platformMap.set(format.platformName, []);
+                    }
+                    platformMap.get(format.platformName)?.push(format);
+                });
+
+                // Convert to array format
+                const platformsData: PlatformData[] = Array.from(platformMap.entries()).map(
+                    ([platform, items]) => ({
+                        platform,
+                        items
+                    })
+                );
+
+                setRepurposingData(platformsData);
+                setError(null);
+            } catch (err) {
+                console.error('Failed to fetch formats:', err);
+                setError('Failed to load formats. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchFormats();
+    }, []);
+
+    // Generate a flat list of all possible item IDs for "Select All" functionality
+    const allItemIds = useMemo(() =>
+        repurposingData.flatMap(p => p.items.map(item => item.id)),
+        [repurposingData]
+    );
+
+    // Handler to add/remove IDs from the array
     const handleCheckChange = (id: string) => {
         setSelectedItems(prev =>
             prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
         );
     };
 
-    // --- LOGIC CHANGE 3: Platform "Select All" now works with the array ---
-    const handlePlatformSelectAll = (platform: string, items: string[]) => {
-        const platformIds = items.map(item => `${platform}-${item}`);
+    // Platform "Select All" functionality
+    const handlePlatformSelectAll = (platformItems: AssetFormat[]) => {
+        const platformIds = platformItems.map(item => item.id);
         const areAllChecked = platformIds.every(id => selectedItems.includes(id));
 
         if (areAllChecked) {
@@ -43,8 +97,8 @@ const RepurposingGrid: React.FC = () => {
             setSelectedItems(prev => [...new Set([...prev, ...platformIds])]);
         }
     };
-  
-    // --- LOGIC CHANGE 4: Global "Select All" now works with the array ---
+
+    // Global "Select All" functionality
     const handleGlobalSelectAll = () => {
         if (selectedItems.length === allItemIds.length) {
             setSelectedItems([]); // Deselect all
@@ -53,24 +107,63 @@ const RepurposingGrid: React.FC = () => {
         }
     };
 
-    // --- LOGIC CHANGE 5: Logic to check if all are selected is now a simple length comparison ---
-    const isAllGloballySelected = useMemo(() => 
-        allItemIds.length > 0 && selectedItems.length === allItemIds.length, 
-        [selectedItems]
+    // Check if all items are globally selected
+    const isAllGloballySelected = useMemo(() =>
+        allItemIds.length > 0 && selectedItems.length === allItemIds.length,
+        [selectedItems, allItemIds]
     );
+
+    // Loading state
+    if (loading) {
+        return (
+            <div className="repurposing-container">
+                <div className="loading-state">
+                    <p>Loading formats...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="repurposing-container">
+                <div className="error-state">
+                    <p>{error}</p>
+                    <button onClick={() => window.location.reload()}>
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // Empty state
+    if (repurposingData.length === 0) {
+        return (
+            <div className="repurposing-container">
+                <div className="empty-state">
+                    <p>No formats available. Please contact your administrator.</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="repurposing-container">
             <label className="select-all-global-label">
-                <input type="checkbox" onChange={handleGlobalSelectAll} checked={isAllGloballySelected} />
+                <input
+                    type="checkbox"
+                    onChange={handleGlobalSelectAll}
+                    checked={isAllGloballySelected}
+                />
                 <span className="custom-checkbox"></span>
-                Select All
+                Select All ({selectedItems.length} of {allItemIds.length} selected)
             </label>
 
             <div className="repurposing-grid">
                 {repurposingData.map(({ platform, items }) => {
-                    const platformIds = items.map(item => `${platform}-${item}`);
-                    // --- LOGIC CHANGE 6: Check if a platform's items are all selected ---
+                    const platformIds = items.map(item => item.id);
                     const areAllPlatformItemsChecked = platformIds.every(id => selectedItems.includes(id));
 
                     return (
@@ -79,27 +172,26 @@ const RepurposingGrid: React.FC = () => {
                                 <h3>{platform}</h3>
                                 <button
                                     className="platform-select-all"
-                                    onClick={() => handlePlatformSelectAll(platform, items)}
+                                    onClick={() => handlePlatformSelectAll(items)}
                                 >
-                                    {areAllPlatformItemsChecked ? 'Deselects All' : 'Selects All'}
+                                    {areAllPlatformItemsChecked ? 'Deselect All' : 'Select All'}
                                 </button>
                             </div>
                             <div className="platform-item-list">
-                                {items.map(item => {
-                                    const id = `${platform}-${item}`;
-                                    return (
-                                        <label key={id} className="platform-item">
-                                            <input
-                                                type="checkbox"
-                                                // --- LOGIC CHANGE 7: Bind "checked" using array.includes() ---
-                                                checked={selectedItems.includes(id)}
-                                                onChange={() => handleCheckChange(id)}
-                                            />
-                                            <span className="custom-checkbox"></span>
-                                            <span>{item}</span>
-                                        </label>
-                                    );
-                                })}
+                                {items.map(item => (
+                                    <label key={item.id} className="platform-item">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedItems.includes(item.id)}
+                                            onChange={() => handleCheckChange(item.id)}
+                                        />
+                                        <span className="custom-checkbox"></span>
+                                        <span>{item.name}</span>
+                                        <span className="format-dimensions">
+                                            {item.width} × {item.height}
+                                        </span>
+                                    </label>
+                                ))}
                             </div>
                         </div>
                     );
