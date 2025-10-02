@@ -245,6 +245,49 @@ body {
   }
 }
 
+/* --- Password Input with Toggle Icon --- */
+
+/* 1. Set the parent container for positioning */
+.form-group {
+  position: relative;
+}
+
+/* 2. Adjust input padding to make space for the icon */
+/* Make sure this rule is specific enough if you have other .form-input styles */
+.form-group input.form-input[type="password"],
+.form-group input.form-input[type="text"] {
+  /* Add padding on the right to prevent text from overlapping the icon */
+  padding-right: 3.5rem; /* 50-60px is usually a good value */
+}
+
+
+/* 3. Style and position the toggle button */
+.password-toggle-btn {
+  /* Positioning */
+  position: absolute;
+  top: 55px; /* Adjust this value to vertically center the icon with your input's height */
+  right: 15px;
+  transform: translateY(-50%); /* Perfect vertical centering trick */
+  
+  /* Styling */
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #8A939C; /* Muted icon color */
+  padding: 0;
+  
+  /* ✨ Amazing Hover Animation ✨ */
+  transition: all 0.2s ease-in-out;
+}
+
+.password-toggle-btn:hover {
+  color: #ffffff; /* Brighter color on hover */
+  transform: translateY(-50%) scale(1.1); /* Lifts and slightly enlarges the icon */
+}
+
+input::-ms-reveal {
+  display: none;
+}
 
 
 
