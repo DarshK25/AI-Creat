@@ -1615,6 +1615,304 @@ body {
 
 
 
+/* --- Adjust Image Page Layout --- */
+.adjust-image-main-content {
+  padding: 1.5rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: calc(100vh - 70px); /* Adjust based on navbar height */
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  color: #e0e0e0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: color 0.3s ease;
+}
+.back-button:hover {
+  color: #149ECA;
+}
+.back-button i { font-size: 0.9rem; }
+
+.description {
+  color: #8A939C;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.apply-changes-button {
+  background-color: #149ECA;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.7rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.apply-changes-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(20, 158, 202, 0.3);
+}
+
+/* --- Content Area: Canvas + Sidebar --- */
+.content-area {
+  flex-grow: 1;
+  display: flex;
+  gap: 2rem;
+  overflow: hidden; /* To prevent overflow from canvas or sidebar */
+}
+
+/* Left: Image Canvas */
+.image-canvas-wrapper {
+  flex: 1;
+  background-color: #2C3338;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.image-info-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1.5rem;
+  background-color: #202528;
+  border-bottom: 1px solid #383e44;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+}
+
+.image-title {
+  font-weight: 500;
+}
+
+.canvas-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.canvas-nav-button {
+  background-color: #383e44;
+  border: none;
+  color: #e0e0e0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+.canvas-nav-button:hover {
+  background-color: #4F5A65;
+  transform: scale(1.05);
+}
+
+.image-canvas {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  background-color: #4d4e4e54;
+  position: relative;
+}
+
+.editable-image {
+  position: relative;
+  width: 600px; /* Example fixed size for the image holder */
+  height: 600px; /* Example fixed size for the image holder */
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  border: 1px dashed #4F5A65;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.crop-selection-area {
+  position: absolute;
+  width: 70%;
+  height: 70%;
+  border: 2px solid #149ECA;
+  background-color: rgba(20, 158, 202, 0.2);
+  cursor: grab;
+  box-sizing: border-box;
+}
+
+/* Draggable Handles for Crop Area */
+.handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background-color: #ffffff;
+  border: 1px solid #149ECA;
+  border-radius: 2px;
+  z-index: 10;
+  opacity: 0; /* Hidden by default */
+  transition: opacity 0.2s ease;
+}
+
+/* ✨ Handle Hover Animation (appears on crop area hover) ✨ */
+.crop-selection-area:hover .handle {
+  opacity: 1;
+}
+
+.handle.top-left { top: -6px; left: -6px; cursor: nwse-resize; }
+.handle.top-right { top: -6px; right: -6px; cursor: nesw-resize; }
+.handle.bottom-left { bottom: -6px; left: -6px; cursor: nesw-resize; }
+.handle.bottom-right { bottom: -6px; right: -6px; cursor: nwse-resize; }
+.handle.top-center { top: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+.handle.bottom-center { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+.handle.left-center { left: -6px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
+.handle.right-center { right: -6px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
+
+
+/* Right: Adjustments Sidebar */
+.adjustments-sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  background-color: #2C3338;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.adjustments-sidebar h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-description {
+  color: #8A939C;
+  font-size: 0.85rem;
+  margin-bottom: 2rem;
+}
+
+.add-text-logo-button {
+  width: 100%;
+  background-color: #383e44;
+  color: #e0e0e0;
+  border: 1px dashed #4F5A65;
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  margin-bottom: 2rem;
+  transition: all 0.3s ease;
+}
+.add-text-logo-button:hover {
+  background-color: #4F5A65;
+  border-color: #149ECA;
+  transform: translateY(-2px);
+}
+
+.adjustment-section {
+  margin-bottom: 2rem;
+}
+.adjustment-section h4 {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #e0e0e0;
+  margin-bottom: 1.5rem;
+}
+
+.slider-control {
+  /* Re-use from previous pages if applicable, otherwise define here */
+}
+.slider-control label {
+  display: block;
+  color: #8A939C;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+.slider-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.slider-value {
+  background-color: #202528;
+  color: #e0e0e0;
+  padding: 0.5rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  min-width: 45px; /* Ensure consistent width for the value display */
+  text-align: center;
+}
+
+/* Custom Range Slider (Re-using from previous pages but slightly adjusting if needed) */
+.custom-range-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: #383e44;
+  border-radius: 5px;
+  outline: none;
+}
+.custom-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #149ECA;
+  cursor: grab;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  transition: background-color 0.2s ease;
+}
+.custom-range-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  background-color: #1FB6E4; /* Lighter blue when dragging */
+}
+.custom-range-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #149ECA;
+  cursor: grab;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  transition: background-color 0.2s ease;
+}
+.custom-range-slider::-moz-range-thumb:active {
+  cursor: grabbing;
+  background-color: #1FB6E4; /* Lighter blue when dragging */
+}
+
+
+
 
 
 
