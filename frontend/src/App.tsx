@@ -5,6 +5,7 @@ import LoginPage from "./pages/UserPages/LoginPage";
 import DashboardPage from "./pages/UserPages/DashboardPage";
 import MultiChannelSelectionPage from "./pages/UserPages/MultiChannelSelectionPage";
 import RealTimePreviewPage from "./pages/UserPages/RealTimePreviewPage";
+import AdjustImagePage from "./pages/UserPages/AdjustImagePage";
 
 const App: React.FC = () => {
     return (
@@ -15,6 +16,7 @@ const App: React.FC = () => {
             <Route path="/user-dashboard" element={<DashboardPage />} />
             <Route path="/multi-select" element={<MultiChannelSelectionPage />} />
             <Route path="/real-time-prev" element={<RealTimePreviewPage />} />
+            <Route path="/adjust-img" element={<AdjustImagePage />} />
         </Routes>
     );
 };
