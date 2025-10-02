@@ -16,7 +16,7 @@ class AssetCreate(AssetBase):
     project_id: UUID4
     storage_path: str
     dimensions: Optional[Dict[str, int]] = None
-    dpi: Optional[int] = None
+    dpi: Optional[int] = None 
 
 
 class AssetUpdate(BaseModel):
