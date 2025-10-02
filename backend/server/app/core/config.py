@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # CORS Configuration
-    BACKEND_CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
+    BACKEND_CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8000,http://localhost:5173"
     
     @property
     def CORS_ORIGINS(self) -> List[str]:

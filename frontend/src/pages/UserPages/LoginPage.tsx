@@ -1,10 +1,38 @@
 import React from 'react';
-import '../../App.css'; // Don't forget to create this CSS file if using component-specific CSS
+import { useState } from 'react';
+import '../../App.css'; 
+import { useNavigate } from 'react-router-dom';
+import { auth } from '../../services/auth';
+import {MdVisibilityOff, MdRemoveRedEye} from "react-icons/md"
 
 const LoginPage: React.FC = () => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try{
+      const res = await auth.login(username, password);
+      localStorage.setItem('token', res.accessToken);
+      navigate('/user-dashboard');
+    } catch(err) {
+      setError("Invalid username/password");
+      console.error('Login error: ', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const navigate = useNavigate();
+  
   return (
     <div className="login-page-container">
-      <div className="login-card">
+      <form className="login-card" onSubmit={handleLogin}>
         {/* Logo Section */}
         <div className="login-logo-section">
           <svg className="login-logo-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -23,6 +51,9 @@ const LoginPage: React.FC = () => {
             id="username"
             className="form-input"
             placeholder="Enter your username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
           />
         </div>
 
@@ -30,19 +61,28 @@ const LoginPage: React.FC = () => {
         <div className="form-group">
           <label htmlFor="password">Password</label>
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             id="password"
             className="form-input"
             placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
           />
+          <button
+            type="button" 
+            className="password-toggle-btn"
+            onClick={() => setShowPassword(!showPassword)}
+          >{showPassword ? <MdVisibilityOff size={24}/> : <MdRemoveRedEye size={24}/>}</button>
           <a href="#" className="forgot-password-link">
             Forgot your password?
           </a>
         </div>
+        {/* {error && <div className="error-message">{error}</div>} */}
 
         {/* Login Button */}
-        <button className="login-button"><a href="/user-dashboard" style={{textDecoration: "none" , color: "white"}}>Login</a></button>
-      </div>
+        <button className="login-button" type="submit" disabled={loading}>{loading?"Logging in":"Login"}</button>
+      </form>
 
       {/* Top Left Logo (replicated from the image) */}
       <div className="top-left-logo">

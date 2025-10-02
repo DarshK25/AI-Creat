@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import '../../App.css'; // Make sure this CSS file exists or integrate into your main CSS
+import '../../App.css'; 
 import AIPreviewSection from './AIPreviewSection';
 
 const DashboardPage: React.FC = () => {
