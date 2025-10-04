@@ -1,14 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useApi } from '../../hooks/useApi';
 import { generation } from '../../services/generation';
-
-interface AssetFormat {
-    id: string;
-    name: string;
-    platformId: string;
-    platformName: string;
-    width: number;
-    height: number;
-}
+import type { AssetFormat, FormatsResponse } from '../../types';
 
 interface PlatformData {
     platform: string;
@@ -25,51 +18,54 @@ const RepurposingGrid: React.FC<RepurposingGridProps> = ({
     initialSelection = []
 }) => {
     const [repurposingData, setRepurposingData] = useState<PlatformData[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [selectedItems, setSelectedItems] = useState<string[]>(initialSelection);
 
-    //Notifying parent componnt at selection changes
+    // API hook
+    const formatsApi = useApi(generation.getFormats);
+
+    // Notify parent component of selection changes
     useEffect(() => {
         onSelectionChange?.(selectedItems);
     }, [selectedItems, onSelectionChange]);
 
+    // Update selected items when initialSelection changes
+    useEffect(() => {
+        setSelectedItems(initialSelection);
+    }, [initialSelection]);
+
+    // Fetch formats on component mount
     useEffect(() => {
         const fetchFormats = async () => {
             try {
-                setLoading(true);
-                const response = await generation.getFormats();
+                const response: FormatsResponse = await formatsApi.execute();
 
                 // Group repurposing formats by platform
                 const platformMap = new Map<string, AssetFormat[]>();
 
                 response.repurposing?.forEach((format: AssetFormat) => {
-                    if (!platformMap.has(format.platformName)) {
-                        platformMap.set(format.platformName, []);
+                    const platformName = format.platform_name || 'Other';
+                    if (!platformMap.has(platformName)) {
+                        platformMap.set(platformName, []);
                     }
-                    platformMap.get(format.platformName)?.push(format);
+                    platformMap.get(platformName)?.push(format);
                 });
 
-                // Convert to array format
-                const platformsData: PlatformData[] = Array.from(platformMap.entries()).map(
-                    ([platform, items]) => ({
+                // Convert to array format and sort platforms
+                const platformsData: PlatformData[] = Array.from(platformMap.entries())
+                    .map(([platform, items]) => ({
                         platform,
-                        items
-                    })
-                );
+                        items: items.sort((a, b) => a.name.localeCompare(b.name))
+                    }))
+                    .sort((a, b) => a.platform.localeCompare(b.platform));
 
                 setRepurposingData(platformsData);
-                setError(null);
-            } catch (err) {
-                console.error('Failed to fetch formats:', err);
-                setError('Failed to load formats. Please try again.');
-            } finally {
-                setLoading(false);
+            } catch (error) {
+                console.error('Failed to fetch formats:', error);
             }
         };
 
         fetchFormats();
-    }, []);
+    }, [formatsApi]);
 
     // Generate a flat list of all possible item IDs for "Select All" functionality
     const allItemIds = useMemo(() =>
@@ -114,10 +110,11 @@ const RepurposingGrid: React.FC<RepurposingGridProps> = ({
     );
 
     // Loading state
-    if (loading) {
+    if (formatsApi.loading) {
         return (
             <div className="repurposing-container">
                 <div className="loading-state">
+                    <div className="loading-spinner"></div>
                     <p>Loading formats...</p>
                 </div>
             </div>
@@ -125,13 +122,17 @@ const RepurposingGrid: React.FC<RepurposingGridProps> = ({
     }
 
     // Error state
-    if (error) {
+    if (formatsApi.error) {
         return (
             <div className="repurposing-container">
                 <div className="error-state">
-                    <p>{error}</p>
-                    <button onClick={() => window.location.reload()}>
-                        Retry
+                    <i className="fas fa-exclamation-triangle"></i>
+                    <p>{formatsApi.error}</p>
+                    <button 
+                        onClick={() => formatsApi.execute()}
+                        className="retry-button"
+                    >
+                        <i className="fas fa-redo"></i> Retry
                     </button>
                 </div>
             </div>
@@ -143,6 +144,7 @@ const RepurposingGrid: React.FC<RepurposingGridProps> = ({
         return (
             <div className="repurposing-container">
                 <div className="empty-state">
+                    <i className="fas fa-inbox"></i>
                     <p>No formats available. Please contact your administrator.</p>
                 </div>
             </div>
@@ -165,11 +167,17 @@ const RepurposingGrid: React.FC<RepurposingGridProps> = ({
                 {repurposingData.map(({ platform, items }) => {
                     const platformIds = items.map(item => item.id);
                     const areAllPlatformItemsChecked = platformIds.every(id => selectedItems.includes(id));
+                    const selectedCount = platformIds.filter(id => selectedItems.includes(id)).length;
 
                     return (
                         <div className="platform-card" key={platform}>
                             <div className="platform-header">
-                                <h3>{platform}</h3>
+                                <h3>
+                                    {platform}
+                                    <span className="platform-count">
+                                        ({selectedCount}/{items.length})
+                                    </span>
+                                </h3>
                                 <button
                                     className="platform-select-all"
                                     onClick={() => handlePlatformSelectAll(items)}
@@ -186,10 +194,12 @@ const RepurposingGrid: React.FC<RepurposingGridProps> = ({
                                             onChange={() => handleCheckChange(item.id)}
                                         />
                                         <span className="custom-checkbox"></span>
-                                        <span>{item.name}</span>
-                                        <span className="format-dimensions">
-                                            {item.width} × {item.height}
-                                        </span>
+                                        <div className="item-details">
+                                            <span className="item-name">{item.name}</span>
+                                            <span className="format-dimensions">
+                                                {item.width} × {item.height}
+                                            </span>
+                                        </div>
                                     </label>
                                 ))}
                             </div>

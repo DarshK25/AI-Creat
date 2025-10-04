@@ -1,47 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import '../../App.css'; 
+import '../../App.css';
 import AIPreviewSection from './AIPreviewSection';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../../services/auth';
+import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../hooks/useAuth';
+import { useDashboard } from '../../hooks/useDashboard';
 import { dashboard } from '../../services/dashboard';
+import type { Project } from '../../types';
 
 const DashboardPage: React.FC = () => {
-
-  const [theme, setTheme] = useState('dark');
-  const [user, setUser] = useState(null);
-  const [projects, setProjects] = useState([]);
-  
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
-
   const navigate = useNavigate();
+  const { state, setTheme } = useAppContext();
+  const { logout } = useAuth();
+  const dashboardHook = useDashboard();
 
+  const [error, setError] = useState('');
+  // Load dashboard data
   const loadDashboardData = async () => {
     try {
-      setLoading(true);
-      const [userProfile, projectsData] = await Promise.all([
-        dashboard.getUserProfile(),
-        dashboard.getProjects()
-      ]);
-      
-      setUser({
-        name: userProfile.username,
-        email: userProfile.email,
-        role: userProfile.role
-      });
-      setProjects(projectsData);
+      setError('');
+      const { userProfile } = await dashboardHook.loadDashboardData();
       
       if (userProfile.preferences?.theme) {
         setTheme(userProfile.preferences.theme);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load dashboard data:', error);
-      setError('Failed to load dashboard data');
-    } finally {
-      setLoading(false);
+      setError(error.message || 'Failed to load dashboard data');
     }
   };
+
   //check authentication first 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -53,7 +41,7 @@ const DashboardPage: React.FC = () => {
   }, [navigate]);
 
   const handleThemeToggle = async () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    const newTheme = state.theme === 'dark' ? 'light' : 'dark';
     try {
       await dashboard.updatePreferences({ theme: newTheme });
       setTheme(newTheme);
@@ -64,50 +52,45 @@ const DashboardPage: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    try {
-      await auth.logout();
-      navigate('/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-      localStorage.removeItem('token');
-      navigate('/login');
-    }
+    await logout();
   };
 
-  const handleFileUpload = async (e) => {
-    const files = Array.from(e.target.files);
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
     try {
-      setUploading(true);
+      setError('');
       const projectName = `Project ${new Date().toLocaleDateString()}`;
-      await dashboard.uploadProject(projectName, files);
-      loadDashboardData();
+      await dashboardHook.uploadProject(projectName, files);
       e.target.value = '';
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload failed:', error);
-      setError('Upload failed');
-    } finally {
-      setUploading(false);
+      setError(error.message || 'Upload failed');
     }
   };
 
-  const formatProjects = (apiProjects) => {
+  const formatProjects = (apiProjects: Project[]) => {
     return apiProjects.map(project => ({
       id: project.id,
       name: project.name,
       psdCount: project.fileCounts?.psd || 0,
       jpgCount: project.fileCounts?.jpg || 0,
       pngCount: project.fileCounts?.png || 0,
-      submitDate: new Date(project.submitDate).toLocaleString(),
+      submitDate: project.submitDate
+        ? new Date(project.submitDate).toLocaleString()
+        : new Date(project.created_at).toLocaleString(),
       status: project.status
     }));
   };
 
-  if (loading) {
+  if (dashboardHook.loading.userProfile || dashboardHook.loading.projects) {
     return (
       <div className="dashboard-container">
-        <div className="loading-message ">Loading ...</div>
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <div className="loading-message">Loading dashboard...</div>
+        </div>
       </div>
     );
   }
@@ -129,7 +112,7 @@ const DashboardPage: React.FC = () => {
         </div>
         <div className="navbar-right">
           <button className="icon-button" onClick={handleThemeToggle} aria-label="Toggle theme">
-            <i className={theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon'}></i>
+            <i className={state.theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon'}></i>
           </button>
           <button className="icon-button">
             <i className="fas fa-bell"></i>
@@ -141,21 +124,22 @@ const DashboardPage: React.FC = () => {
             <i className="fas fa-sign-out-alt"></i>
           </button>
           <div className="user-profile">
-            <img 
-              src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=880&q=80" 
-              alt="User" 
-              className="profile-avatar" 
+            <img
+              src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=880&q=80"
+              alt="User"
+              className="profile-avatar"
             />
           </div>
         </div>
       </header>
 
       <main className="main-content">
-        <h1 className="greeting-title">Hello {user?.name || 'User'}!</h1>
+        <h1 className="greeting-title">Hello {state.user?.username || 'User'}!</h1>
         <p className="greeting-subtitle">Upload your master creative here ...</p>
-        {error && (
-          <div className="error-message" style={{color: 'red', marginBottom: '20px'}}>
-            {error}
+        {(error || dashboardHook.errors.userProfile || dashboardHook.errors.projects || dashboardHook.errors.upload) && (
+          <div className="error-message" style={{ color: 'red', marginBottom: '20px' }}>
+            <i className="fas fa-exclamation-triangle"></i>
+            {error || dashboardHook.errors.userProfile || dashboardHook.errors.projects || dashboardHook.errors.upload}
           </div>
         )}
 
@@ -163,20 +147,20 @@ const DashboardPage: React.FC = () => {
           <div className="upload-box">
             <i className="fas fa-cloud-upload-alt upload-icon"></i>
             <p className="upload-text">
-              Upload one or multiple files (JPG, PNG or PSD) or 
-              <label className="upload-browse-link" style={{cursor: 'pointer', marginLeft: '5px'}}>
+              Upload one or multiple files (JPG, PNG or PSD) or
+              <label className="upload-browse-link" style={{ cursor: 'pointer', marginLeft: '5px' }}>
                 Browse
-                <input 
-                  type="file" 
-                  multiple 
+                <input
+                  type="file"
+                  multiple
                   accept=".jpg,.jpeg,.png,.psd"
                   onChange={handleFileUpload}
-                  style={{display: 'none'}}
-                  disabled={uploading}
+                  style={{ display: 'none' }}
+                  disabled={dashboardHook.loading.upload}
                 />
               </label>
             </p>
-            {uploading && <p style={{color: '#007bff'}}>Uploading files...</p>}
+            {dashboardHook.loading.upload && <p style={{ color: '#007bff' }}>Uploading files...</p>}
           </div>
         </div>
 
@@ -187,10 +171,10 @@ const DashboardPage: React.FC = () => {
           </div>
 
           <div className="projects-list">
-            {projects.length === 0 ? (
+            {state.projects.length === 0 ? (
               <div className="no-projects">No projects found. Upload some files to get started!</div>
             ) : (
-              formatProjects(projects).map((project) => (
+              formatProjects(state.projects).map((project) => (
                 <div key={project.id} className="project-item">
                   <div className="project-col project-id">
                     <i className="fas fa-folder project-icon"></i>
@@ -225,8 +209,8 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        <AIPreviewSection onRefresh={ loadDashboardData} projects={projects }/>
-        
+        <AIPreviewSection onRefresh={loadDashboardData} projects={state.projects} />
+
       </main>
     </div>
   );

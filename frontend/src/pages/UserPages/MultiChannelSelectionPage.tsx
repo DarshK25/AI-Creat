@@ -442,7 +442,7 @@ const MultiChannelSelectionPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <RepurposingGrid 
+          <RepurposingGrid
             onSelectionChange={(selectedFormatIds) => {
               setSelectedTemplates(selectedFormatIds);
             }}

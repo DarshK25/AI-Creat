@@ -40,6 +40,12 @@ const RealTimePreviewPage: React.FC = () => {
   const [groupBy, setGroupBy] = useState<'platform' | 'type'>('platform');
   const [openPlatforms, setOpenPlatforms] = useState<string[]>([]);
 
+  // Batch download state
+  const [showBatchDownload, setShowBatchDownload] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState<'JPEG' | 'PNG' | 'PSD'>('JPEG');
+  const [imageQuality, setImageQuality] = useState<'High' | 'Medium' | 'Low'>('High');
+  const [downloadOption, setDownloadOption] = useState<'Batch' | 'Individual'>('Batch');
+
   const handleThemeToggle = () => {
     setTheme(currentTheme => (currentTheme === 'dark' ? 'light' : 'dark'));
   };
@@ -139,6 +145,36 @@ const RealTimePreviewPage: React.FC = () => {
 
   const formatDimensions = (dimensions: { width: number; height: number }) => {
     return `${dimensions.width} × ${dimensions.height}`;
+  };
+
+  const handleBatchDownload = async () => {
+    if (selectedAssets.length === 0) {
+      alert('Please select assets to download');
+      return;
+    }
+
+    try {
+      // Create download request
+      const downloadData = {
+        assetIds: selectedAssets,
+        format: downloadFormat.toLowerCase(),
+        quality: imageQuality.toLowerCase(),
+        downloadType: downloadOption.toLowerCase()
+      };
+
+      // Call download API
+      const response = await generation.downloadAssets(downloadData);
+      
+      // Handle download response (this would typically trigger a file download)
+      if (response.downloadUrl) {
+        window.open(response.downloadUrl, '_blank');
+      }
+      
+      setShowBatchDownload(false);
+    } catch (error) {
+      console.error('Download failed:', error);
+      alert('Download failed. Please try again.');
+    }
   };
 
   // Loading state
@@ -256,6 +292,7 @@ const RealTimePreviewPage: React.FC = () => {
             <button
               className="action-button primary"
               disabled={selectedAssets.length === 0}
+              onClick={() => setShowBatchDownload(true)}
             >
               Download Selected ({selectedAssets.length})
             </button>
@@ -330,7 +367,12 @@ const RealTimePreviewPage: React.FC = () => {
                                       (e.target as HTMLImageElement).style.display = 'none';
                                     }}
                                   />
-                                  <button className="edit-more-button">Edit More</button>
+                                  <button 
+                                    className="edit-more-button"
+                                    onClick={() => navigate(`/adjust-img?assetId=${asset.id}`)}
+                                  >
+                                    Edit More
+                                  </button>
                                 </div>
                                 <div className="asset-footer">
                                   <span className="asset-type">{asset.formatName}</span>
@@ -386,6 +428,76 @@ const RealTimePreviewPage: React.FC = () => {
             </div>
           </aside>
         </div>
+
+        {/* Batch Download Modal */}
+        {showBatchDownload && (
+          <div className="batch-download-modal">
+            <div className="batch-download-overlay" onClick={() => setShowBatchDownload(false)}></div>
+            <div className="batch-download-sidebar">
+              <div className="batch-download-header">
+                <h3>Batch Download</h3>
+                <button 
+                  className="close-button"
+                  onClick={() => setShowBatchDownload(false)}
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+
+              <div className="batch-download-content">
+                <div className="download-section">
+                  <h4>File Formats</h4>
+                  <select 
+                    value={downloadFormat} 
+                    onChange={(e) => setDownloadFormat(e.target.value as 'JPEG' | 'PNG' | 'PSD')}
+                    className="format-select"
+                  >
+                    <option value="JPEG">JPEG</option>
+                    <option value="PNG">PNG</option>
+                    <option value="PSD">PSD</option>
+                  </select>
+                </div>
+
+                <div className="download-section">
+                  <h4>Image Quality (PPI)</h4>
+                  <select 
+                    value={imageQuality} 
+                    onChange={(e) => setImageQuality(e.target.value as 'High' | 'Medium' | 'Low')}
+                    className="quality-select"
+                  >
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                  </select>
+                </div>
+
+                <div className="download-section">
+                  <h4>Download Options</h4>
+                  <select 
+                    value={downloadOption} 
+                    onChange={(e) => setDownloadOption(e.target.value as 'Batch' | 'Individual')}
+                    className="option-select"
+                  >
+                    <option value="Batch">Batch</option>
+                    <option value="Individual">Individual</option>
+                  </select>
+                </div>
+
+                <div className="download-summary">
+                  <p>Download All generated Versions ({selectedAssets.length})</p>
+                </div>
+
+                <button 
+                  className="download-button"
+                  onClick={handleBatchDownload}
+                  disabled={selectedAssets.length === 0}
+                >
+                  Download
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

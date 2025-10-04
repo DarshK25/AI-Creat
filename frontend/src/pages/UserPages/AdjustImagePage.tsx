@@ -1,70 +1,90 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import '../../App.css';
-import RepurposingGrid from './RepurposingGrid';
+import { Rnd } from 'react-rnd';
+import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../hooks/useAuth';
+import { useApi } from '../../hooks/useApi';
 import { generation } from '../../services/generation';
-import { dashboard } from '../../services/dashboard';
-import { auth } from '../../services/auth';
+import type { GeneratedAsset } from '../../types';
 
-// Type definitions
-interface AssetFormat {
-  id: string;
-  name: string;
-  platformId: string;
-  platformName: string;
+interface CropBox {
   width: number;
   height: number;
+  x: number;
+  y: number;
 }
 
-interface FormatsResponse {
-  resizing: AssetFormat[];
-  repurposing: AssetFormat[];
-}
-
-interface ProvidersResponse {
-  providers: string[];
-}
-
-interface Project {
+interface TextOverlay {
   id: string;
-  name?: string;
-  created_at?: string;
-  updated_at?: string;
+  text: string;
+  x: number;
+  y: number;
+  fontSize: number;
+  color: string;
+  fontFamily: string;
 }
 
-interface TemplateItem {
+interface LogoOverlay {
   id: string;
-  name: string;
-  dimensions: string;
-  ratio: string;
-  iconRatio: string;
+  imageUrl: string;
+  x: number;
+  y: number;
   width: number;
   height: number;
+  opacity: number;
 }
 
-interface TemplateCategory {
-  category: string;
-  items: TemplateItem[];
+interface ImageAdjustments {
+  cropArea: number;
+  colorSaturation: number;
+  brightness: number;
+  contrast: number;
+  cropBox: CropBox;
+  textOverlays: TextOverlay[];
+  logoOverlays: LogoOverlay[];
 }
 
-const MultiChannelSelectionPage: React.FC = () => {
-  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<'resizing' | 'repurposing'>('resizing');
-  const [templateData, setTemplateData] = useState<TemplateCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [customWidth, setCustomWidth] = useState(1080);
-  const [customHeight, setCustomHeight] = useState(1920);
-  const [customUnit, setCustomUnit] = useState('pixels');
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [providers, setProviders] = useState<string[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState('gemini');
-  const [generating, setGenerating] = useState(false);
-
+const AdjustImagePage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const projectId = searchParams.get('projectId');
+  const { state, setTheme } = useAppContext();
+  const { logout } = useAuth();
+
+  // URL parameters
+  const assetId = searchParams.get('assetId');
+  const jobId = searchParams.get('jobId');
+
+  // Local state
+  const [currentAsset, setCurrentAsset] = useState<GeneratedAsset | null>(null);
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [totalAssets, setTotalAssets] = useState<number>(0);
+  const [error, setError] = useState<string>('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+
+  // Image adjustments state
+  const [adjustments, setAdjustments] = useState<ImageAdjustments>({
+    cropArea: 100,
+    colorSaturation: 0,
+    brightness: 0,
+    contrast: 0,
+    cropBox: {
+      width: 420,
+      height: 420,
+      x: 90,
+      y: 90,
+    },
+    textOverlays: [],
+    logoOverlays: [],
+  });
+
+  // UI state for adding text/logo
+  const [showTextDialog, setShowTextDialog] = useState(false);
+  const [showLogoDialog, setShowLogoDialog] = useState(false);
+  const [newText, setNewText] = useState('');
+  const [selectedTextColor, setSelectedTextColor] = useState('#ffffff');
+
+  // API hooks (only for apply edits)
+  const applyEditsApi = useApi(generation.applyManualEdits);
 
   // Load data on component mount
   useEffect(() => {
@@ -73,175 +93,224 @@ const MultiChannelSelectionPage: React.FC = () => {
       navigate('/login');
       return;
     }
-    loadPageData();
-  }, [navigate]);
 
-  const loadPageData = async () => {
-    try {
-      setLoading(true);
-      const [formatsData, providersData, projectsData] = await Promise.all([
-        generation.getFormats() as Promise<FormatsResponse>,
-        generation.getProviders() as Promise<ProvidersResponse>,
-        dashboard.getProjects() as Promise<Project[]>
-      ]);
+    let isMounted = true; // Prevent state updates if component unmounts
 
-      // Transform formats data to match template structure
-      const transformedData = transformFormatsToTemplates(formatsData.resizing || []);
-      setTemplateData(transformedData);
-      setProviders(providersData.providers || ['gemini']);
-      setProjects(projectsData || []);
-
-      // Set selected project from URL or use most recent
-      if (projectId && projectsData) {
-        const project = projectsData.find((p: Project) => p.id === projectId);
-        setSelectedProject(project || null);
-      } else if (projectsData && projectsData.length > 0) {
-        setSelectedProject(projectsData[0]);
+    const loadAssetData = async () => {
+      if (!assetId && !jobId) {
+        if (isMounted) setError('No asset or job ID provided');
+        return;
       }
 
-    } catch (error) {
-      console.error('Failed to load page data:', error);
-      setError('Failed to load templates and projects');
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        if (isMounted) setError('');
 
-  // Transform backend formats to frontend template structure
-  const transformFormatsToTemplates = (formats: AssetFormat[]): TemplateCategory[] => {
-    const grouped = formats.reduce((acc: Record<string, TemplateItem[]>, format: AssetFormat) => {
-      const category = format.platformName || 'Other';
-      if (!acc[category]) {
-        acc[category] = [];
+        if (assetId) {
+          // Load specific asset directly using the service
+          console.log('Loading asset with ID:', assetId);
+          const asset = await generation.getGeneratedAsset(assetId);
+          if (isMounted && asset) {
+            setCurrentAsset(asset);
+            setCurrentIndex(0);
+            setTotalAssets(1);
+            console.log('Asset loaded successfully:', asset);
+          } else if (isMounted) {
+            setError('Asset not found');
+          }
+        } else if (jobId) {
+          // Load job results directly using the service
+          const results = await generation.getJobResults(jobId);
+          if (isMounted && results) {
+            const allAssets = Object.values(results).flat();
+
+            if (allAssets.length > 0) {
+              setCurrentAsset(allAssets[0]);
+              setCurrentIndex(0);
+              setTotalAssets(allAssets.length);
+            } else {
+              setError('No assets found for this job');
+            }
+          }
+        }
+      } catch (error: any) {
+        if (isMounted) {
+          setError(error.message || 'Failed to load asset data');
+        }
       }
+    };
 
-      const ratio = calculateAspectRatio(format.width, format.height);
-      const iconRatio = getIconRatio(format.width, format.height);
+    loadAssetData();
 
-      acc[category].push({
-        id: format.id,
-        name: format.name,
-        dimensions: `${format.width}x${format.height}`,
-        ratio: ratio,
-        iconRatio: iconRatio,
-        width: format.width,
-        height: format.height
-      });
-      return acc;
-    }, {});
+    return () => {
+      isMounted = false; // Cleanup function
+    };
+  }, [navigate, assetId, jobId]); // Only depend on URL params
 
-    return Object.entries(grouped).map(([category, items]) => ({
-      category,
-      items
+  // Handle adjustment changes
+  const handleAdjustmentChange = useCallback((key: keyof ImageAdjustments, value: any) => {
+    setAdjustments(prev => ({
+      ...prev,
+      [key]: value,
     }));
+    setHasUnsavedChanges(true);
+  }, []);
+
+  // Handle crop box changes
+  const handleCropBoxChange = useCallback((newCropBox: Partial<CropBox>) => {
+    setAdjustments(prev => ({
+      ...prev,
+      cropBox: { ...prev.cropBox, ...newCropBox },
+    }));
+    setHasUnsavedChanges(true);
+  }, []);
+
+  // Add text overlay
+  const handleAddText = () => {
+    if (!newText.trim()) return;
+
+    const textOverlay: TextOverlay = {
+      id: `text-${Date.now()}`,
+      text: newText,
+      x: 100,
+      y: 100,
+      fontSize: 24,
+      color: selectedTextColor,
+      fontFamily: 'Arial, sans-serif',
+    };
+
+    setAdjustments(prev => ({
+      ...prev,
+      textOverlays: [...prev.textOverlays, textOverlay],
+    }));
+
+    setNewText('');
+    setShowTextDialog(false);
+    setHasUnsavedChanges(true);
   };
 
-  const calculateAspectRatio = (width: number, height: number): string => {
-    const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
-    const divisor = gcd(width, height);
-    return `${width / divisor}:${height / divisor}`;
+  // Add logo overlay
+  const handleAddLogo = (logoFile: File) => {
+    const logoUrl = URL.createObjectURL(logoFile);
+
+    const logoOverlay: LogoOverlay = {
+      id: `logo-${Date.now()}`,
+      imageUrl: logoUrl,
+      x: 50,
+      y: 50,
+      width: 100,
+      height: 100,
+      opacity: 1,
+    };
+
+    setAdjustments(prev => ({
+      ...prev,
+      logoOverlays: [...prev.logoOverlays, logoOverlay],
+    }));
+
+    setShowLogoDialog(false);
+    setHasUnsavedChanges(true);
   };
 
-  const getIconRatio = (width: number, height: number): string => {
-    const ratio = width / height;
-    if (ratio > 1.5) return 'wide';
-    if (ratio < 0.7) return 'tall';
-    if (ratio > 0.9 && ratio < 1.1) return 'square';
-    if (ratio < 0.5) return 'skyscraper';
-    return 'medium';
+  // Remove text overlay
+  const handleRemoveText = (textId: string) => {
+    setAdjustments(prev => ({
+      ...prev,
+      textOverlays: prev.textOverlays.filter(t => t.id !== textId),
+    }));
+    setHasUnsavedChanges(true);
   };
 
-  const allTemplateIds = templateData.flatMap(cat => cat.items.map(item => item.id));
-
-  const handleCheckboxChange = (id: string) => {
-    setSelectedTemplates(prev =>
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
+  // Remove logo overlay
+  const handleRemoveLogo = (logoId: string) => {
+    setAdjustments(prev => ({
+      ...prev,
+      logoOverlays: prev.logoOverlays.filter(l => l.id !== logoId),
+    }));
+    setHasUnsavedChanges(true);
   };
 
-  const handleSelectAll = () => {
-    if (selectedTemplates.length === allTemplateIds.length) {
-      setSelectedTemplates([]);
-    } else {
-      setSelectedTemplates(allTemplateIds);
+  // Apply changes to the asset
+  const handleApplyChanges = async () => {
+    if (!currentAsset) {
+      setError('No asset selected');
+      return;
     }
+
+    try {
+      setError('');
+
+      const edits = {
+        crop: {
+          x: adjustments.cropBox.x,
+          y: adjustments.cropBox.y,
+          width: adjustments.cropBox.width,
+          height: adjustments.cropBox.height,
+        },
+        adjustments: {
+          saturation: adjustments.colorSaturation,
+          brightness: adjustments.brightness,
+          contrast: adjustments.contrast,
+        },
+        textOverlays: adjustments.textOverlays,
+        logoOverlays: adjustments.logoOverlays,
+        timestamp: new Date().toISOString(),
+      };
+
+      await applyEditsApi.execute(currentAsset.id, edits);
+      setHasUnsavedChanges(false);
+
+      // Optionally navigate back or show success message
+      // navigate(-1);
+    } catch (error: any) {
+      setError(error.message || 'Failed to apply changes');
+    }
+  };
+
+  // Navigation handlers
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(prev => prev - 1);
+      // Load previous asset logic here
+    }
+  };
+
+  const handleNext = () => {
+    if (currentIndex < totalAssets - 1) {
+      setCurrentIndex(prev => prev + 1);
+      // Load next asset logic here
+    }
+  };
+
+  const handleBack = () => {
+    if (hasUnsavedChanges) {
+      const confirmLeave = window.confirm('You have unsaved changes. Are you sure you want to leave?');
+      if (!confirmLeave) return;
+    }
+    navigate(-1);
+  };
+
+  const handleThemeToggle = () => {
+    const newTheme = state.theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
   };
 
   const handleLogout = async () => {
-    try {
-      await auth.logout();
-      navigate('/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-      navigate('/login');
-    }
+    await logout();
   };
 
-  const handleGenerateWithAI = async () => {
-    console.log('=== GENERATE WITH AI CLICKED ===');
-    console.log('Selected project:', selectedProject);
-    console.log('Selected templates:', selectedTemplates);
-    console.log('Custom dimensions:', { width: customWidth, height: customHeight });
-    console.log('Selected provider:', selectedProvider);
 
-    if (!selectedProject) {
-      console.log('ERROR: No project selected');
-      setError('Please select a project first');
-      return;
-    }
 
-    if (selectedTemplates.length === 0 && (customWidth === 0 || customHeight === 0)) {
-      console.log('ERROR: No templates or custom dimensions');
-      setError('Please select at least one template or specify custom dimensions');
-      return;
-    }
-
-    try {
-      setGenerating(true);
-      setError('');
-
-      const customResizes = [];
-      if (customWidth > 0 && customHeight > 0) {
-        customResizes.push({ width: customWidth, height: customHeight });
-      }
-
-      const generationRequest = {
-        projectId: selectedProject.id,
-        formatIds: selectedTemplates,
-        customResizes: customResizes,
-        provider: selectedProvider
-      };
-
-      console.log('Generation request:', generationRequest);
-      console.log('Calling generation.startGeneration...');
-
-      const result = await generation.startGeneration(generationRequest);
-      console.log('Generation result:', result);
-
-      console.log('Navigating to:', `/real-time-prev?jobId=${result.jobId}`);
-      navigate(`/real-time-prev?jobId=${result.jobId}`);
-
-    } catch (error: any) {
-      console.error('=== GENERATION ERROR ===');
-      console.error('Error details:', error);
-      console.error('Error response:', error.response?.data);
-      console.error('Error status:', error.response?.status);
-      setError(`Generation failed: ${error.response?.data?.detail || error.message}`);
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  if (loading) {
+  // Loading state
+  if (!currentAsset && !error) {
     return (
-      <div className="selection-page-container">
-        <div className="loading-message">Loading templates and projects...</div>
+      <div className="adjust-image-page-container">
+        <div className="loading-message">Loading asset...</div>
       </div>
     );
   }
 
   return (
-    <div className="selection-page-container">
+    <div className="adjust-image-page-container">
       <header className="navbar">
         <div className="navbar-left">
           <div className="navbar-logo">
@@ -257,6 +326,13 @@ const MultiChannelSelectionPage: React.FC = () => {
           </nav>
         </div>
         <div className="navbar-right">
+          <button
+            className="icon-button"
+            onClick={handleThemeToggle}
+            aria-label="Toggle theme"
+          >
+            <i className={state.theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon'}></i>
+          </button>
           <button className="icon-button">
             <i className="fas fa-bell"></i>
           </button>
@@ -276,182 +352,323 @@ const MultiChannelSelectionPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="selection-main-content">
-        {/* Top Header */}
-        <div className="selection-header">
-          <div>
-            <h1>Multi-channel Selection</h1>
-            {selectedProject && (
-              <p className="selected-project">
-                Project: <strong>{selectedProject.name || `Project ${selectedProject.id.slice(-4)}`}</strong>
-              </p>
-            )}
-          </div>
-          <div className="header-controls">
-            {projects.length > 1 && (
-              <select
-                value={selectedProject?.id || ''}
-                onChange={(e) => {
-                  const project = projects.find(p => p.id === e.target.value);
-                  setSelectedProject(project || null);
-                }}
-                className="project-selector"
-              >
-                {projects.map(project => (
-                  <option key={project.id} value={project.id}>
-                    {project.name || `Project ${project.id.slice(-4)}`}
-                  </option>
-                ))}
-              </select>
-            )}
-            <button
-              className="generate-ai-button"
-              onClick={handleGenerateWithAI}
-              disabled={generating || !selectedProject}
-            >
-              <i className="fas fa-plus"></i>
-              {generating ? 'Generating...' : 'Generate With AI'}
+      <main className="adjust-image-main-content">
+        <div className="top-bar">
+          <div className="top-bar-left">
+            <button className="back-button" onClick={handleBack}>
+              <i className="fas fa-chevron-left"></i> Adjust Image
             </button>
+            <p className="description">Manually cropping and adjusting option for the images</p>
           </div>
+          <button
+            className="apply-changes-button"
+            onClick={handleApplyChanges}
+            disabled={!hasUnsavedChanges || applyEditsApi.loading}
+          >
+            {applyEditsApi.loading ? 'Applying...' : 'Apply Changes'}
+          </button>
         </div>
 
         {error && (
-          <div className="error-message" style={{ color: 'red', marginBottom: '20px' }}>
+          <div className="error-message" style={{ color: 'red', margin: '1rem 2rem' }}>
             {error}
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="selection-tabs">
-          <button
-            className={`tab-item ${activeTab === 'resizing' ? 'active' : ''}`}
-            onClick={() => setActiveTab('resizing')}
-          >
-            Resizing
-          </button>
-          <button
-            className={`tab-item ${activeTab === 'repurposing' ? 'active' : ''}`}
-            onClick={() => setActiveTab('repurposing')}
-          >
-            Repurposing
-          </button>
-        </div>
-
-        {/* Main Content */}
-        {activeTab === 'resizing' ? (
-          <div className="selection-columns">
-            {/* Left Column: Templates */}
-            <div className="template-column">
-              <div className="column-header">
-                <h3>Templates ({selectedTemplates.length} selected)</h3>
-                <button onClick={handleSelectAll} className="select-all-button">
-                  {selectedTemplates.length === allTemplateIds.length ? 'Deselect All' : 'Select All'}
+        <div className="content-area">
+          <div className="image-canvas-wrapper">
+            <div className="image-info-bar">
+              <span className="image-title">
+                {currentAsset ?
+                  `${currentAsset.filename} for ${currentAsset.formatName} (${currentAsset.dimensions.width}x${currentAsset.dimensions.height})` :
+                  'Loading...'
+                }
+              </span>
+              <div className="canvas-controls">
+                <span>{currentIndex + 1} of {totalAssets}</span>
+                <button
+                  className="canvas-nav-button"
+                  onClick={handlePrevious}
+                  disabled={currentIndex === 0}
+                >
+                  <i className="fas fa-chevron-left"></i>
+                </button>
+                <button
+                  className="canvas-nav-button"
+                  onClick={handleNext}
+                  disabled={currentIndex >= totalAssets - 1}
+                >
+                  <i className="fas fa-chevron-right"></i>
                 </button>
               </div>
-              <div className="template-list">
-                {templateData.length === 0 ? (
-                  <div className="no-templates">No templates available</div>
-                ) : (
-                  templateData.map(category => (
-                    <div key={category.category} className="template-category">
-                      <h4>{category.category}</h4>
-                      {category.items.map(item => (
-                        <label key={item.id} className="template-item">
-                          <input
-                            type="checkbox"
-                            checked={selectedTemplates.includes(item.id)}
-                            onChange={() => handleCheckboxChange(item.id)}
-                          />
-                          <span className="custom-checkbox"></span>
-                          <div className="template-details">
-                            <span className="template-name">{item.name}</span>
-                            <span className="template-dims">{item.dimensions}</span>
-                          </div>
-                          <div className="aspect-ratio">
-                            <div className={`aspect-ratio-icon ratio-${item.iconRatio}`}></div>
-                            <span>{item.ratio}</span>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  ))
-                )}
+            </div>
+            <div className="image-canvas">
+              {currentAsset && (
+                <div
+                  className="editable-image"
+                  style={{
+                    backgroundImage: `url('${currentAsset.assetUrl}')`,
+                    filter: `saturate(${100 + adjustments.colorSaturation}%) brightness(${100 + adjustments.brightness}%) contrast(${100 + adjustments.contrast}%)`,
+                  }}
+                >
+                  <Rnd
+                    size={{ width: adjustments.cropBox.width, height: adjustments.cropBox.height }}
+                    position={{ x: adjustments.cropBox.x, y: adjustments.cropBox.y }}
+                    onDragStop={(_, d) => {
+                      handleCropBoxChange({ x: d.x, y: d.y });
+                    }}
+                    onResizeStop={(_, __, ref, ___, position) => {
+                      handleCropBoxChange({
+                        width: parseInt(ref.style.width, 10),
+                        height: parseInt(ref.style.height, 10),
+                        ...position,
+                      });
+                    }}
+                    bounds="parent"
+                    className="crop-selection-area"
+                  />
+
+                  {/* Text Overlays */}
+                  {adjustments.textOverlays.map((textOverlay) => (
+                    <Rnd
+                      key={textOverlay.id}
+                      size={{ width: 'auto', height: 'auto' }}
+                      position={{ x: textOverlay.x, y: textOverlay.y }}
+                      onDragStop={(_, d) => {
+                        setAdjustments(prev => ({
+                          ...prev,
+                          textOverlays: prev.textOverlays.map(t =>
+                            t.id === textOverlay.id ? { ...t, x: d.x, y: d.y } : t
+                          ),
+                        }));
+                        setHasUnsavedChanges(true);
+                      }}
+                      bounds="parent"
+                      className="text-overlay"
+                    >
+                      <div
+                        style={{
+                          fontSize: `${textOverlay.fontSize}px`,
+                          color: textOverlay.color,
+                          fontFamily: textOverlay.fontFamily,
+                          cursor: 'move',
+                          userSelect: 'none',
+                          textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                        }}
+                      >
+                        {textOverlay.text}
+                        <button
+                          className="overlay-remove-btn"
+                          onClick={() => handleRemoveText(textOverlay.id)}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </Rnd>
+                  ))}
+
+                  {/* Logo Overlays */}
+                  {adjustments.logoOverlays.map((logoOverlay) => (
+                    <Rnd
+                      key={logoOverlay.id}
+                      size={{ width: logoOverlay.width, height: logoOverlay.height }}
+                      position={{ x: logoOverlay.x, y: logoOverlay.y }}
+                      onDragStop={(_, d) => {
+                        setAdjustments(prev => ({
+                          ...prev,
+                          logoOverlays: prev.logoOverlays.map(l =>
+                            l.id === logoOverlay.id ? { ...l, x: d.x, y: d.y } : l
+                          ),
+                        }));
+                        setHasUnsavedChanges(true);
+                      }}
+                      onResizeStop={(_, __, ref, ___, position) => {
+                        setAdjustments(prev => ({
+                          ...prev,
+                          logoOverlays: prev.logoOverlays.map(l =>
+                            l.id === logoOverlay.id ? {
+                              ...l,
+                              width: parseInt(ref.style.width, 10),
+                              height: parseInt(ref.style.height, 10),
+                              ...position,
+                            } : l
+                          ),
+                        }));
+                        setHasUnsavedChanges(true);
+                      }}
+                      bounds="parent"
+                      className="logo-overlay"
+                    >
+                      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                        <img
+                          src={logoOverlay.imageUrl}
+                          alt="Logo"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            opacity: logoOverlay.opacity,
+                          }}
+                        />
+                        <button
+                          className="overlay-remove-btn"
+                          onClick={() => handleRemoveLogo(logoOverlay.id)}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </Rnd>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <aside className="adjustments-sidebar">
+            <h3>Adjust</h3>
+            <p className="sidebar-description">Click & drag to crop image & reposition elements.</p>
+
+            <div className="add-content-buttons">
+              <button
+                className="add-text-logo-button"
+                onClick={() => setShowTextDialog(true)}
+              >
+                <i className="fas fa-font"></i> Add Text
+              </button>
+              <button
+                className="add-text-logo-button"
+                onClick={() => setShowLogoDialog(true)}
+              >
+                <i className="fas fa-image"></i> Add Logo
+              </button>
+            </div>
+
+            <div className="adjustment-section">
+              <h4>Manual Cropping</h4>
+              <div className="slider-control">
+                <label>Crop Area</label>
+                <div className="slider-wrapper">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={adjustments.cropArea}
+                    onChange={(e) => handleAdjustmentChange('cropArea', Number(e.target.value))}
+                    className="custom-range-slider"
+                  />
+                  <span className="slider-value">{adjustments.cropArea}%</span>
+                </div>
               </div>
             </div>
 
-            {/* Right Column: Custom */}
-            <div className="custom-column">
-              <div className="column-header">
-                <h3>Custom Dimensions</h3>
+            <div className="adjustment-section">
+              <h4>Color Saturation Adjustments</h4>
+              <div className="slider-control">
+                <label>Color Saturation</label>
+                <div className="slider-wrapper">
+                  <input
+                    type="range"
+                    min="-100"
+                    max="100"
+                    value={adjustments.colorSaturation}
+                    onChange={(e) => handleAdjustmentChange('colorSaturation', Number(e.target.value))}
+                    className="custom-range-slider"
+                  />
+                  <span className="slider-value">{adjustments.colorSaturation}</span>
+                </div>
               </div>
-              <div className="custom-form">
-                <div className="form-group">
-                  <label>Sizes</label>
-                  <div className="dimension-inputs">
-                    <div className="input-wrapper">
-                      <span>W</span>
-                      <input
-                        type="number"
-                        value={customWidth}
-                        onChange={(e) => setCustomWidth(parseInt(e.target.value) || 0)}
-                        min="1"
-                      />
-                    </div>
-                    <div className="input-wrapper">
-                      <span>H</span>
-                      <input
-                        type="number"
-                        value={customHeight}
-                        onChange={(e) => setCustomHeight(parseInt(e.target.value) || 0)}
-                        min="1"
-                      />
-                    </div>
-                  </div>
+            </div>
+
+            <div className="adjustment-section">
+              <h4>Logo Adjustments</h4>
+              <div className="slider-control">
+                <label>Logo Size</label>
+                <div className="slider-wrapper">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={50}
+                    onChange={(e) => {/* Handle logo size */ }}
+                    className="custom-range-slider"
+                  />
+                  <span className="slider-value">50</span>
                 </div>
-                <div className="form-group">
-                  <label htmlFor="unit-select">Unit</label>
-                  <div className="select-wrapper">
-                    <select
-                      id="unit-select"
-                      value={customUnit}
-                      onChange={(e) => setCustomUnit(e.target.value)}
-                    >
-                      <option value="pixels">Pixels</option>
-                      <option value="inches">Inches</option>
-                      <option value="cm">Centimeters</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="provider-select">AI Provider</label>
-                  <div className="select-wrapper">
-                    <select
-                      id="provider-select"
-                      value={selectedProvider}
-                      onChange={(e) => setSelectedProvider(e.target.value)}
-                    >
-                      {providers.map(provider => (
-                        <option key={provider} value={provider}>
-                          {provider.charAt(0).toUpperCase() + provider.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+              </div>
+            </div>
+
+            {hasUnsavedChanges && (
+              <div className="unsaved-changes-notice">
+                <i className="fas fa-exclamation-triangle"></i>
+                You have unsaved changes
+              </div>
+            )}
+          </aside>
+        </div>
+
+        {/* Add Text Dialog */}
+        {showTextDialog && (
+          <div className="overlay-dialog">
+            <div className="dialog-backdrop" onClick={() => setShowTextDialog(false)}></div>
+            <div className="dialog-content">
+              <h3>Add Text</h3>
+              <input
+                type="text"
+                placeholder="Enter your text..."
+                value={newText}
+                onChange={(e) => setNewText(e.target.value)}
+                className="text-input"
+                autoFocus
+              />
+              <div className="color-picker-section">
+                <label>Text Color:</label>
+                <input
+                  type="color"
+                  value={selectedTextColor}
+                  onChange={(e) => setSelectedTextColor(e.target.value)}
+                  className="color-picker"
+                />
+              </div>
+              <div className="dialog-actions">
+                <button onClick={() => setShowTextDialog(false)} className="cancel-btn">
+                  Cancel
+                </button>
+                <button onClick={handleAddText} className="add-btn" disabled={!newText.trim()}>
+                  Add Text
+                </button>
               </div>
             </div>
           </div>
-        ) : (
-          <RepurposingGrid 
-            onSelectionChange={(selectedFormatIds) => {
-              setSelectedTemplates(selectedFormatIds);
-            }}
-            initialSelection={selectedTemplates}
-          />
+        )}
+
+        {/* Add Logo Dialog */}
+        {showLogoDialog && (
+          <div className="overlay-dialog">
+            <div className="dialog-backdrop" onClick={() => setShowLogoDialog(false)}></div>
+            <div className="dialog-content">
+              <h3>Add Logo</h3>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleAddLogo(file);
+                  }
+                }}
+                className="file-input"
+              />
+              <div className="dialog-actions">
+                <button onClick={() => setShowLogoDialog(false)} className="cancel-btn">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
     </div>
   );
 };
 
-export default MultiChannelSelectionPage;
+export default AdjustImagePage;
