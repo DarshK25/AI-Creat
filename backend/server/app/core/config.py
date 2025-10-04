@@ -58,6 +58,14 @@ class Settings(BaseSettings):
     OPENAI_ENABLED: str = os.getenv("OPENAI_ENABLED", "false")
     CLAUDE_ENABLED: str = os.getenv("CLAUDE_ENABLED", "false")
     
+    # Additional Gemini Configuration
+    GEMINI_PRIORITY: Optional[str] = os.getenv("GEMINI_PRIORITY")
+    GEMINI_RPM: Optional[str] = os.getenv("GEMINI_RPM")
+    GEMINI_MODEL: Optional[str] = os.getenv("GEMINI_MODEL")
+    
+    # Stability AI Configuration
+    STABILITY_ENABLED: Optional[str] = os.getenv("STABILITY_ENABLED")
+    
     # Celery Configuration
     CELERY_BROKER_URL: str = os.getenv("CELERY_BROKER_URL", "pyamqp://guest@localhost//")
     CELERY_RESULT_BACKEND: str = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379")
@@ -65,6 +73,7 @@ class Settings(BaseSettings):
     class Config:
         case_sensitive = True
         env_file = ".env"
+        extra = "ignore"  # Ignore extra fields instead of raising validation errors
 
 
 settings = Settings()
