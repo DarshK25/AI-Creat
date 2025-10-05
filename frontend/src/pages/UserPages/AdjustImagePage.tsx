@@ -5,6 +5,8 @@ import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useApi } from '../../hooks/useApi';
 import { generation } from '../../services/generation';
+import { AuthenticatedImage } from '../../components/AuthenticatedImage';
+import { getFullImageUrl } from '../../utils/url';
 import type { GeneratedAsset } from '../../types';
 
 interface CropBox {
@@ -80,11 +82,30 @@ const AdjustImagePage: React.FC = () => {
   // UI state for adding text/logo
   const [showTextDialog, setShowTextDialog] = useState(false);
   const [showLogoDialog, setShowLogoDialog] = useState(false);
+  const [showAddDropdown, setShowAddDropdown] = useState(false);
+  const [showTextStylesView, setShowTextStylesView] = useState(false);
   const [newText, setNewText] = useState('');
   const [selectedTextColor, setSelectedTextColor] = useState('#ffffff');
 
   // API hooks (only for apply edits)
   const applyEditsApi = useApi(generation.applyManualEdits);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showAddDropdown) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('.add-dropdown-container')) {
+          setShowAddDropdown(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showAddDropdown]);
 
   // Load data on component mount
   useEffect(() => {
@@ -500,16 +521,39 @@ const AdjustImagePage: React.FC = () => {
                 <div
                   className="editable-image"
                   style={{
-                    backgroundImage: `url('${currentAsset.assetUrl}')`,
-                    filter: `saturate(${100 + adjustments.colorSaturation}%) brightness(${100 + adjustments.brightness}%) contrast(${100 + adjustments.contrast}%)`,
                     width: '600px',
                     height: `${(600 * currentAsset.dimensions.height) / currentAsset.dimensions.width}px`,
-                    backgroundSize: 'contain',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'center',
                     position: 'relative',
+                    overflow: 'hidden',
                   }}
                 >
+                  <AuthenticatedImage
+                    src={getFullImageUrl(currentAsset.assetUrl)}
+                    alt={currentAsset.formatName}
+                    style={{
+                      filter: `saturate(${100 + adjustments.colorSaturation}%) brightness(${100 + adjustments.brightness}%) contrast(${100 + adjustments.contrast}%)`,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                    }}
+                    placeholder={
+                      <div style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: '#f0f0f0',
+                        color: '#666'
+                      }}>
+                        <i className="fas fa-image" style={{ fontSize: '2rem', marginRight: '0.5rem' }}></i>
+                        Loading image...
+                      </div>
+                    }
+                  />
                   <Rnd
                     size={{ 
                       width: (adjustments.cropBox.width * 600) / currentAsset.dimensions.width, 
@@ -540,13 +584,26 @@ const AdjustImagePage: React.FC = () => {
                     className="crop-selection-area"
                     minWidth={20}
                     minHeight={20}
+                    resizeHandleStyles={{
+                      topLeft: { width: '8px', height: '8px', backgroundColor: '#00bcd4', border: '2px solid white' },
+                      top: { width: '8px', height: '8px', backgroundColor: '#00bcd4', border: '2px solid white' },
+                      topRight: { width: '8px', height: '8px', backgroundColor: '#00bcd4', border: '2px solid white' },
+                      right: { width: '8px', height: '8px', backgroundColor: '#00bcd4', border: '2px solid white' },
+                      bottomRight: { width: '8px', height: '8px', backgroundColor: '#00bcd4', border: '2px solid white' },
+                      bottom: { width: '8px', height: '8px', backgroundColor: '#00bcd4', border: '2px solid white' },
+                      bottomLeft: { width: '8px', height: '8px', backgroundColor: '#00bcd4', border: '2px solid white' },
+                      left: { width: '8px', height: '8px', backgroundColor: '#00bcd4', border: '2px solid white' }
+                    }}
                   />
 
                   {/* Text Overlays */}
                   {adjustments.textOverlays.map((textOverlay) => (
                     <Rnd
                       key={textOverlay.id}
-                      size={{ width: 'auto', height: 'auto' }}
+                      size={{ 
+                        width: (textOverlay.fontSize * textOverlay.text.length * 0.6 * 600) / currentAsset.dimensions.width, 
+                        height: (textOverlay.fontSize * 1.2 * 600) / currentAsset.dimensions.width 
+                      }}
                       position={{ 
                         x: (textOverlay.x * 600) / currentAsset.dimensions.width, 
                         y: (textOverlay.y * 600) / currentAsset.dimensions.width 
@@ -562,9 +619,39 @@ const AdjustImagePage: React.FC = () => {
                         }));
                         setHasUnsavedChanges(true);
                       }}
+                      onResizeStop={(_, __, ref, ___, position) => {
+                        const newWidth = parseInt(ref.style.width, 10);
+                        const newFontSize = (newWidth * currentAsset.dimensions.width) / (600 * textOverlay.text.length * 0.6);
+                        const actualX = (position.x * currentAsset.dimensions.width) / 600;
+                        const actualY = (position.y * currentAsset.dimensions.width) / 600;
+                        setAdjustments(prev => ({
+                          ...prev,
+                          textOverlays: prev.textOverlays.map(t =>
+                            t.id === textOverlay.id ? { 
+                              ...t, 
+                              x: actualX, 
+                              y: actualY, 
+                              fontSize: Math.max(12, newFontSize) 
+                            } : t
+                          ),
+                        }));
+                        setHasUnsavedChanges(true);
+                      }}
                       bounds="parent"
                       className="text-overlay"
-                      enableResizing={false}
+                      enableResizing={true}
+                      minWidth={20}
+                      minHeight={15}
+                      resizeHandleStyles={{
+                        topLeft: { width: '6px', height: '6px', backgroundColor: '#00bcd4', border: '1px solid white' },
+                        top: { width: '6px', height: '6px', backgroundColor: '#00bcd4', border: '1px solid white' },
+                        topRight: { width: '6px', height: '6px', backgroundColor: '#00bcd4', border: '1px solid white' },
+                        right: { width: '6px', height: '6px', backgroundColor: '#00bcd4', border: '1px solid white' },
+                        bottomRight: { width: '6px', height: '6px', backgroundColor: '#00bcd4', border: '1px solid white' },
+                        bottom: { width: '6px', height: '6px', backgroundColor: '#00bcd4', border: '1px solid white' },
+                        bottomLeft: { width: '6px', height: '6px', backgroundColor: '#00bcd4', border: '1px solid white' },
+                        left: { width: '6px', height: '6px', backgroundColor: '#00bcd4', border: '1px solid white' }
+                      }}
                     >
                       <div
                         style={{
@@ -634,6 +721,16 @@ const AdjustImagePage: React.FC = () => {
                       className="logo-overlay"
                       minWidth={20}
                       minHeight={20}
+                      resizeHandleStyles={{
+                        topLeft: { width: '6px', height: '6px', backgroundColor: '#00bcd4', border: '1px solid white' },
+                        top: { width: '6px', height: '6px', backgroundColor: '#00bcd4', border: '1px solid white' },
+                        topRight: { width: '6px', height: '6px', backgroundColor: '#00bcd4', border: '1px solid white' },
+                        right: { width: '6px', height: '6px', backgroundColor: '#00bcd4', border: '1px solid white' },
+                        bottomRight: { width: '6px', height: '6px', backgroundColor: '#00bcd4', border: '1px solid white' },
+                        bottom: { width: '6px', height: '6px', backgroundColor: '#00bcd4', border: '1px solid white' },
+                        bottomLeft: { width: '6px', height: '6px', backgroundColor: '#00bcd4', border: '1px solid white' },
+                        left: { width: '6px', height: '6px', backgroundColor: '#00bcd4', border: '1px solid white' }
+                      }}
                     >
                       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                         <img
@@ -661,77 +758,142 @@ const AdjustImagePage: React.FC = () => {
           </div>
 
           <aside className="adjustments-sidebar">
-            <h3>Adjust</h3>
-            <p className="sidebar-description">Click & drag to crop image & reposition elements.</p>
-
-            <div className="add-content-buttons">
-              <button
-                className="add-text-logo-button"
-                onClick={() => setShowTextDialog(true)}
-              >
-                <i className="fas fa-font"></i> Add Text
-              </button>
-              <button
-                className="add-text-logo-button"
-                onClick={() => setShowLogoDialog(true)}
-              >
-                <i className="fas fa-image"></i> Add Logo
-              </button>
-            </div>
-
-            <div className="adjustment-section">
-              <h4>Manual Cropping</h4>
-              <div className="slider-control">
-                <label>Crop Area</label>
-                <div className="slider-wrapper">
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={adjustments.cropArea}
-                    onChange={(e) => handleAdjustmentChange('cropArea', Number(e.target.value))}
-                    className="custom-range-slider"
-                  />
-                  <span className="slider-value">{adjustments.cropArea}%</span>
+            {!showTextStylesView ? (
+              <>
+                <h3>Adjust</h3>
+                <p className="sidebar-description">Click & drag to crop image & reposition elements.</p>
+              </>
+            ) : (
+              <>
+                <div className="text-styles-header">
+                  <button 
+                    className="back-to-adjust-btn"
+                    onClick={() => setShowTextStylesView(false)}
+                  >
+                    <i className="fas fa-chevron-left"></i>
+                  </button>
+                  <h3>Add Text</h3>
                 </div>
+                <p className="sidebar-description">Click the Text Style to add text to the image.</p>
+              </>
+            )}
+
+            <div className="add-content-section">
+              <div className="add-dropdown-container">
+                <button
+                  className="add-text-logo-button"
+                  onClick={() => setShowAddDropdown(!showAddDropdown)}
+                >
+                  <i className="fas fa-plus"></i> Add Text or Logo
+                  <i className={`fas fa-chevron-${showAddDropdown ? 'up' : 'down'}`}></i>
+                </button>
+                {showAddDropdown && (
+                  <div className="add-dropdown">
+                    <button
+                      className="dropdown-item"
+                      onClick={() => {
+                        setShowTextStylesView(true);
+                        setShowAddDropdown(false);
+                      }}
+                    >
+                      <i className="fas fa-font"></i> Add Text
+                    </button>
+                    <button
+                      className="dropdown-item"
+                      onClick={() => {
+                        setShowLogoDialog(true);
+                        setShowAddDropdown(false);
+                      }}
+                    >
+                      <i className="fas fa-upload"></i> Import from Computer
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="adjustment-section">
-              <h4>Color Saturation Adjustments</h4>
-              <div className="slider-control">
-                <label>Color Saturation</label>
-                <div className="slider-wrapper">
-                  <input
-                    type="range"
-                    min="-100"
-                    max="100"
-                    value={adjustments.colorSaturation}
-                    onChange={(e) => handleAdjustmentChange('colorSaturation', Number(e.target.value))}
-                    className="custom-range-slider"
-                  />
-                  <span className="slider-value">{adjustments.colorSaturation}</span>
+            {!showTextStylesView ? (
+              <>
+                <div className="adjustment-section">
+                  <h4>Manual Cropping</h4>
+                  <div className="slider-control">
+                    <label>Crop Area</label>
+                    <div className="slider-wrapper">
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={adjustments.cropArea}
+                        onChange={(e) => handleAdjustmentChange('cropArea', Number(e.target.value))}
+                        className="custom-range-slider"
+                      />
+                      <span className="slider-value">{adjustments.cropArea}%</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="adjustment-section">
-              <h4>Logo Adjustments</h4>
-              <div className="slider-control">
-                <label>Logo Size</label>
-                <div className="slider-wrapper">
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={50}
-                    onChange={(e) => {/* Handle logo size */ }}
-                    className="custom-range-slider"
-                  />
-                  <span className="slider-value">50</span>
+                <div className="adjustment-section">
+                  <h4>Color Saturation Adjustments</h4>
+                  <div className="slider-control">
+                    <label>Color Saturation</label>
+                    <div className="slider-wrapper">
+                      <input
+                        type="range"
+                        min="-100"
+                        max="100"
+                        value={adjustments.colorSaturation}
+                        onChange={(e) => handleAdjustmentChange('colorSaturation', Number(e.target.value))}
+                        className="custom-range-slider"
+                      />
+                      <span className="slider-value">{adjustments.colorSaturation}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="adjustment-section">
+                  <h4>Logo Adjustments</h4>
+                  <div className="slider-control">
+                    <label>Logo Size</label>
+                    <div className="slider-wrapper">
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={50}
+                        onChange={(e) => {/* Handle logo size */ }}
+                        className="custom-range-slider"
+                      />
+                      <span className="slider-value">50</span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-styles-section">
+                <div className="text-styles-header-info">
+                  <h4>Text Style</h4>
+                  <button className="view-all-btn">View All</button>
+                </div>
+                <div className="text-styles-grid">
+                  {[1, 2, 3, 4, 5, 6].map((index) => (
+                    <div 
+                      key={index}
+                      className="text-style-card"
+                      onClick={() => {
+                        setNewText('Title Here!');
+                        setShowTextDialog(true);
+                        setShowTextStylesView(false);
+                      }}
+                    >
+                      <div className="text-style-preview">
+                        <div className="title-text">Title Here!</div>
+                        <div className="subtitle-text">Text Here!</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
+            )}
 
             {hasUnsavedChanges && (
               <div className="unsaved-changes-notice">

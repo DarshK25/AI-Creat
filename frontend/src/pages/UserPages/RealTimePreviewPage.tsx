@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import '../../App.css';
 import { generation } from '../../services/generation';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { getFullImageUrl } from '../../utils/url';
+import { AuthenticatedImage } from '../../components/AuthenticatedImage';
 
 interface GeneratedAsset {
   id: string;
@@ -44,7 +46,7 @@ const RealTimePreviewPage: React.FC = () => {
   const [showBatchDownload, setShowBatchDownload] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState<'JPEG' | 'PNG' | 'PSD'>('JPEG');
   const [imageQuality, setImageQuality] = useState<'High' | 'Medium' | 'Low'>('High');
-  const [downloadOption, setDownloadOption] = useState<'Batch' | 'Individual'>('Batch');
+  const [downloadOption, setDownloadOption] = useState<'Batch' | 'Individual' | 'Category'>('Individual');
 
   const handleThemeToggle = () => {
     setTheme(currentTheme => (currentTheme === 'dark' ? 'light' : 'dark'));
@@ -80,6 +82,7 @@ const RealTimePreviewPage: React.FC = () => {
           // Job completed, get results
           try {
             const results = await generation.getJobResults(jobId);
+            console.log('Job results received:', results);
             if (!cancelled) {
               setJobResults(results || {});
               setLoading(false);
@@ -88,6 +91,11 @@ const RealTimePreviewPage: React.FC = () => {
               if (firstPlatform) {
                 setOpenPlatforms([firstPlatform]);
               }
+              
+              // Debug: Log asset URLs
+              Object.values(results || {}).flat().forEach((asset: any) => {
+                console.log('Asset:', asset.id, 'URL:', asset.assetUrl);
+              });
             }
           } catch (resultsError) {
             console.error('Failed to get job results:', resultsError);
@@ -169,7 +177,8 @@ const RealTimePreviewPage: React.FC = () => {
 
       const groupingMap: { [key: string]: 'individual' | 'batch' | 'category' } = {
         'Individual': 'individual',
-        'Batch': 'batch'
+        'Batch': 'batch',
+        'Category': 'category'
       };
 
       // Create download request with correct format
@@ -385,12 +394,15 @@ const RealTimePreviewPage: React.FC = () => {
                                   <span className="asset-name">{asset.formatName}</span>
                                 </div>
                                 <div className="asset-thumbnail">
-                                  <img
-                                    src={asset.assetUrl}
+                                  <AuthenticatedImage
+                                    src={getFullImageUrl(asset.assetUrl)}
                                     alt={asset.formatName}
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).style.display = 'none';
-                                    }}
+                                    placeholder={
+                                      <div className="image-placeholder">
+                                        <i className="fas fa-image"></i>
+                                        <span>Image not available</span>
+                                      </div>
+                                    }
                                   />
                                   <div className="asset-actions">
                                     <button
@@ -398,20 +410,6 @@ const RealTimePreviewPage: React.FC = () => {
                                       onClick={() => navigate(`/adjust-img?assetId=${asset.id}`)}
                                     >
                                       Edit More
-                                    </button>
-                                    <button
-                                      className="download-single-button"
-                                      onClick={async () => {
-                                        try {
-                                          await generation.downloadSingleAsset(asset.id);
-                                        } catch (error: any) {
-                                          console.error('Download failed:', error);
-                                          alert('Download failed. Please try again.');
-                                        }
-                                      }}
-                                      title="Download this asset"
-                                    >
-                                      <i className="fas fa-download"></i>
                                     </button>
                                   </div>
                                 </div>
@@ -516,11 +514,12 @@ const RealTimePreviewPage: React.FC = () => {
                   <h4>Download Options</h4>
                   <select
                     value={downloadOption}
-                    onChange={(e) => setDownloadOption(e.target.value as 'Batch' | 'Individual')}
+                    onChange={(e) => setDownloadOption(e.target.value as 'Batch' | 'Individual' | 'Category')}
                     className="option-select"
                   >
-                    <option value="Batch">Batch</option>
                     <option value="Individual">Individual</option>
+                    <option value="Batch">Batch</option>
+                    <option value="Category">Category</option>
                   </select>
                 </div>
 

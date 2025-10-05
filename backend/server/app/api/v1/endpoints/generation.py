@@ -189,6 +189,7 @@ async def get_generation_job_status(
 @router.get("/generate/{jobId}/results")
 async def get_generation_job_results(
     jobId: str,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Dict[str, List[GeneratedAssetResponse]]:
@@ -206,16 +207,20 @@ async def get_generation_job_results(
     
     results = generation_service.get_job_results(jobId)
     
+    # Get base URL for full asset URLs
+    base_url = str(request.base_url).rstrip('/')
+    
     # Convert to response format
     response = {}
     for platform_name, assets in results.items():
         response[platform_name] = []
         for asset in assets:
+            full_asset_url = f"{base_url}/api/v1/assets/{asset.id}/download"
             response[platform_name].append(GeneratedAssetResponse(
                 id=str(asset.id),
                 originalAssetId=str(asset.original_asset_id),
                 filename=f"generated_{asset.id}.{asset.file_type}",
-                assetUrl=f"/api/v1/assets/{asset.id}/download",
+                assetUrl=full_asset_url,
                 platformName=platform_name,
                 formatName=asset.asset_format.name if asset.asset_format else "Custom",
                 dimensions=asset.dimensions,
