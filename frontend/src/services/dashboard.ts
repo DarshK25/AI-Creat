@@ -60,7 +60,7 @@ export const dashboard = {
   },
 
   getAIProviders: async (): Promise<ProvidersResponse> => {
-    const response = await api.get('/api/v1/generation/providers');
+    const response = await api.get('/api/v1/providers');
     return response.data;
   },
 

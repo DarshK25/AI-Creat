@@ -92,7 +92,7 @@ export const generation = {
   },
 
   applyManualEdits: async (assetId: string, edits: any): Promise<GeneratedAsset> => {
-    const response = await api.put(`${BASE_URL}/generation/generated-assets/${assetId}`, {
+    const response = await api.put(`${BASE_URL}/generated-assets/${assetId}`, {
       edits: edits,
     });
     return response.data;
@@ -102,9 +102,33 @@ export const generation = {
     assetIds: string[];
     format: string;
     quality: string;
-    downloadType: string;
+    grouping: string;
   }): Promise<{ downloadUrl: string }> => {
-    const response = await api.post(`${BASE_URL}/download/batch`, downloadData);
+    // Use the correct download endpoint with proper payload structure
+    const payload = {
+      assetIds: downloadData.assetIds,
+      format: downloadData.format,
+      quality: downloadData.quality,
+      grouping: downloadData.grouping
+    };
+    const response = await api.post(`${BASE_URL}/download`, payload);
     return response.data;
+  },
+
+  downloadSingleAsset: async (assetId: string): Promise<void> => {
+    // Direct download using the asset download endpoint
+    const response = await api.get(`${BASE_URL}/assets/${assetId}/download`, {
+      responseType: 'blob'
+    });
+    
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `asset_${assetId}.jpg`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   },
 };

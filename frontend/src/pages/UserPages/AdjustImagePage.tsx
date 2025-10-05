@@ -68,10 +68,10 @@ const AdjustImagePage: React.FC = () => {
     brightness: 0,
     contrast: 0,
     cropBox: {
-      width: 420,
-      height: 420,
-      x: 90,
-      y: 90,
+      width: 300,
+      height: 300,
+      x: 50,
+      y: 50,
     },
     textOverlays: [],
     logoOverlays: [],
@@ -113,6 +113,22 @@ const AdjustImagePage: React.FC = () => {
             setCurrentAsset(asset);
             setCurrentIndex(0);
             setTotalAssets(1);
+            
+            // Initialize crop box based on asset dimensions
+            const cropSize = Math.min(asset.dimensions.width, asset.dimensions.height) * 0.8;
+            const cropX = (asset.dimensions.width - cropSize) / 2;
+            const cropY = (asset.dimensions.height - cropSize) / 2;
+            
+            setAdjustments(prev => ({
+              ...prev,
+              cropBox: {
+                width: cropSize,
+                height: cropSize,
+                x: cropX,
+                y: cropY,
+              }
+            }));
+            
             console.log('Asset loaded successfully:', asset);
           } else if (isMounted) {
             setError('Asset not found');
@@ -124,9 +140,25 @@ const AdjustImagePage: React.FC = () => {
             const allAssets = Object.values(results).flat();
 
             if (allAssets.length > 0) {
-              setCurrentAsset(allAssets[0]);
+              const asset = allAssets[0];
+              setCurrentAsset(asset);
               setCurrentIndex(0);
               setTotalAssets(allAssets.length);
+              
+              // Initialize crop box based on asset dimensions
+              const cropSize = Math.min(asset.dimensions.width, asset.dimensions.height) * 0.8;
+              const cropX = (asset.dimensions.width - cropSize) / 2;
+              const cropY = (asset.dimensions.height - cropSize) / 2;
+              
+              setAdjustments(prev => ({
+                ...prev,
+                cropBox: {
+                  width: cropSize,
+                  height: cropSize,
+                  x: cropX,
+                  y: cropY,
+                }
+              }));
             } else {
               setError('No assets found for this job');
             }
@@ -166,14 +198,14 @@ const AdjustImagePage: React.FC = () => {
 
   // Add text overlay
   const handleAddText = () => {
-    if (!newText.trim()) return;
+    if (!newText.trim() || !currentAsset) return;
 
     const textOverlay: TextOverlay = {
       id: `text-${Date.now()}`,
       text: newText,
-      x: 100,
-      y: 100,
-      fontSize: 24,
+      x: currentAsset.dimensions.width * 0.5, // Center horizontally
+      y: currentAsset.dimensions.height * 0.5, // Center vertically
+      fontSize: Math.max(24, currentAsset.dimensions.width * 0.05), // Scale font size
       color: selectedTextColor,
       fontFamily: 'Arial, sans-serif',
     };
@@ -190,15 +222,17 @@ const AdjustImagePage: React.FC = () => {
 
   // Add logo overlay
   const handleAddLogo = (logoFile: File) => {
+    if (!currentAsset) return;
+    
     const logoUrl = URL.createObjectURL(logoFile);
 
     const logoOverlay: LogoOverlay = {
       id: `logo-${Date.now()}`,
       imageUrl: logoUrl,
-      x: 50,
-      y: 50,
-      width: 100,
-      height: 100,
+      x: currentAsset.dimensions.width * 0.1, // 10% from left
+      y: currentAsset.dimensions.height * 0.1, // 10% from top
+      width: Math.min(100, currentAsset.dimensions.width * 0.2), // 20% of image width or 100px max
+      height: Math.min(100, currentAsset.dimensions.width * 0.2), // Keep square
       opacity: 1,
     };
 
@@ -239,30 +273,71 @@ const AdjustImagePage: React.FC = () => {
     try {
       setError('');
 
-      const edits = {
-        crop: {
-          x: adjustments.cropBox.x,
-          y: adjustments.cropBox.y,
-          width: adjustments.cropBox.width,
-          height: adjustments.cropBox.height,
-        },
-        adjustments: {
-          saturation: adjustments.colorSaturation,
-          brightness: adjustments.brightness,
-          contrast: adjustments.contrast,
-        },
-        textOverlays: adjustments.textOverlays,
-        logoOverlays: adjustments.logoOverlays,
-        timestamp: new Date().toISOString(),
+      // Get image dimensions for normalization
+      const imageDimensions = currentAsset.dimensions;
+      
+      // Normalize crop coordinates to 0-1 range
+      const normalizedCrop = {
+        x: Math.max(0, Math.min(1, adjustments.cropBox.x / imageDimensions.width)),
+        y: Math.max(0, Math.min(1, adjustments.cropBox.y / imageDimensions.height)),
+        width: Math.max(0.1, Math.min(1, adjustments.cropBox.width / imageDimensions.width)),
+        height: Math.max(0.1, Math.min(1, adjustments.cropBox.height / imageDimensions.height)),
       };
 
+      // Ensure crop area doesn't extend beyond image boundaries
+      if (normalizedCrop.x + normalizedCrop.width > 1) {
+        normalizedCrop.width = 1 - normalizedCrop.x;
+      }
+      if (normalizedCrop.y + normalizedCrop.height > 1) {
+        normalizedCrop.height = 1 - normalizedCrop.y;
+      }
+
+      // Normalize text overlay positions
+      const normalizedTextOverlays = adjustments.textOverlays.map(overlay => ({
+        text: overlay.text,
+        x: overlay.x / imageDimensions.width,
+        y: overlay.y / imageDimensions.height,
+        style_set_id: "00000000-0000-0000-0000-000000000000", // Default style set
+        style_type: "default"
+      }));
+
+      // Normalize logo overlay positions
+      // Note: For now, we'll skip logo overlays as they require file upload to server
+      // This would need to be implemented with proper file upload functionality
+      const normalizedLogoOverlays: any[] = [];
+      
+      // TODO: Implement logo file upload to server before applying edits
+      if (adjustments.logoOverlays.length > 0) {
+        console.warn('Logo overlays are not yet supported in the backend. Skipping logo overlays.');
+      }
+
+      // Normalize saturation to -1 to 1 range
+      const normalizedSaturation = adjustments.colorSaturation / 100;
+
+      const edits = {
+        crop: normalizedCrop,
+        saturation: normalizedSaturation,
+        text_overlays: normalizedTextOverlays,
+        logo_overlays: normalizedLogoOverlays,
+      };
+
+      console.log('Applying edits:', edits);
       await applyEditsApi.execute(currentAsset.id, edits);
       setHasUnsavedChanges(false);
 
-      // Optionally navigate back or show success message
-      // navigate(-1);
+      // Show success message
+      alert('Changes applied successfully!');
+      
+      // Refresh the asset to show updated version
+      try {
+        const updatedAsset = await generation.getGeneratedAsset(currentAsset.id);
+        setCurrentAsset(updatedAsset);
+      } catch (refreshError) {
+        console.warn('Could not refresh asset after edit:', refreshError);
+      }
     } catch (error: any) {
-      setError(error.message || 'Failed to apply changes');
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to apply changes';
+      setError(errorMessage);
     }
   };
 
@@ -360,13 +435,31 @@ const AdjustImagePage: React.FC = () => {
             </button>
             <p className="description">Manually cropping and adjusting option for the images</p>
           </div>
-          <button
-            className="apply-changes-button"
-            onClick={handleApplyChanges}
-            disabled={!hasUnsavedChanges || applyEditsApi.loading}
-          >
-            {applyEditsApi.loading ? 'Applying...' : 'Apply Changes'}
-          </button>
+          <div className="top-bar-actions">
+            <button
+              className="download-button"
+              onClick={async () => {
+                if (currentAsset) {
+                  try {
+                    await generation.downloadSingleAsset(currentAsset.id);
+                  } catch (error: any) {
+                    console.error('Download failed:', error);
+                    setError('Download failed. Please try again.');
+                  }
+                }
+              }}
+              disabled={!currentAsset}
+            >
+              <i className="fas fa-download"></i> Download
+            </button>
+            <button
+              className="apply-changes-button"
+              onClick={handleApplyChanges}
+              disabled={!hasUnsavedChanges || applyEditsApi.loading}
+            >
+              {applyEditsApi.loading ? 'Applying...' : 'Apply Changes'}
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -409,23 +502,44 @@ const AdjustImagePage: React.FC = () => {
                   style={{
                     backgroundImage: `url('${currentAsset.assetUrl}')`,
                     filter: `saturate(${100 + adjustments.colorSaturation}%) brightness(${100 + adjustments.brightness}%) contrast(${100 + adjustments.contrast}%)`,
+                    width: '600px',
+                    height: `${(600 * currentAsset.dimensions.height) / currentAsset.dimensions.width}px`,
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    position: 'relative',
                   }}
                 >
                   <Rnd
-                    size={{ width: adjustments.cropBox.width, height: adjustments.cropBox.height }}
-                    position={{ x: adjustments.cropBox.x, y: adjustments.cropBox.y }}
+                    size={{ 
+                      width: (adjustments.cropBox.width * 600) / currentAsset.dimensions.width, 
+                      height: (adjustments.cropBox.height * 600) / currentAsset.dimensions.width 
+                    }}
+                    position={{ 
+                      x: (adjustments.cropBox.x * 600) / currentAsset.dimensions.width, 
+                      y: (adjustments.cropBox.y * 600) / currentAsset.dimensions.width 
+                    }}
                     onDragStop={(_, d) => {
-                      handleCropBoxChange({ x: d.x, y: d.y });
+                      const actualX = (d.x * currentAsset.dimensions.width) / 600;
+                      const actualY = (d.y * currentAsset.dimensions.width) / 600;
+                      handleCropBoxChange({ x: actualX, y: actualY });
                     }}
                     onResizeStop={(_, __, ref, ___, position) => {
+                      const actualWidth = (parseInt(ref.style.width, 10) * currentAsset.dimensions.width) / 600;
+                      const actualHeight = (parseInt(ref.style.height, 10) * currentAsset.dimensions.width) / 600;
+                      const actualX = (position.x * currentAsset.dimensions.width) / 600;
+                      const actualY = (position.y * currentAsset.dimensions.width) / 600;
                       handleCropBoxChange({
-                        width: parseInt(ref.style.width, 10),
-                        height: parseInt(ref.style.height, 10),
-                        ...position,
+                        width: actualWidth,
+                        height: actualHeight,
+                        x: actualX,
+                        y: actualY,
                       });
                     }}
                     bounds="parent"
                     className="crop-selection-area"
+                    minWidth={20}
+                    minHeight={20}
                   />
 
                   {/* Text Overlays */}
@@ -433,27 +547,34 @@ const AdjustImagePage: React.FC = () => {
                     <Rnd
                       key={textOverlay.id}
                       size={{ width: 'auto', height: 'auto' }}
-                      position={{ x: textOverlay.x, y: textOverlay.y }}
+                      position={{ 
+                        x: (textOverlay.x * 600) / currentAsset.dimensions.width, 
+                        y: (textOverlay.y * 600) / currentAsset.dimensions.width 
+                      }}
                       onDragStop={(_, d) => {
+                        const actualX = (d.x * currentAsset.dimensions.width) / 600;
+                        const actualY = (d.y * currentAsset.dimensions.width) / 600;
                         setAdjustments(prev => ({
                           ...prev,
                           textOverlays: prev.textOverlays.map(t =>
-                            t.id === textOverlay.id ? { ...t, x: d.x, y: d.y } : t
+                            t.id === textOverlay.id ? { ...t, x: actualX, y: actualY } : t
                           ),
                         }));
                         setHasUnsavedChanges(true);
                       }}
                       bounds="parent"
                       className="text-overlay"
+                      enableResizing={false}
                     >
                       <div
                         style={{
-                          fontSize: `${textOverlay.fontSize}px`,
+                          fontSize: `${(textOverlay.fontSize * 600) / currentAsset.dimensions.width}px`,
                           color: textOverlay.color,
                           fontFamily: textOverlay.fontFamily,
                           cursor: 'move',
                           userSelect: 'none',
                           textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         {textOverlay.text}
@@ -471,26 +592,39 @@ const AdjustImagePage: React.FC = () => {
                   {adjustments.logoOverlays.map((logoOverlay) => (
                     <Rnd
                       key={logoOverlay.id}
-                      size={{ width: logoOverlay.width, height: logoOverlay.height }}
-                      position={{ x: logoOverlay.x, y: logoOverlay.y }}
+                      size={{ 
+                        width: (logoOverlay.width * 600) / currentAsset.dimensions.width, 
+                        height: (logoOverlay.height * 600) / currentAsset.dimensions.width 
+                      }}
+                      position={{ 
+                        x: (logoOverlay.x * 600) / currentAsset.dimensions.width, 
+                        y: (logoOverlay.y * 600) / currentAsset.dimensions.width 
+                      }}
                       onDragStop={(_, d) => {
+                        const actualX = (d.x * currentAsset.dimensions.width) / 600;
+                        const actualY = (d.y * currentAsset.dimensions.width) / 600;
                         setAdjustments(prev => ({
                           ...prev,
                           logoOverlays: prev.logoOverlays.map(l =>
-                            l.id === logoOverlay.id ? { ...l, x: d.x, y: d.y } : l
+                            l.id === logoOverlay.id ? { ...l, x: actualX, y: actualY } : l
                           ),
                         }));
                         setHasUnsavedChanges(true);
                       }}
                       onResizeStop={(_, __, ref, ___, position) => {
+                        const actualWidth = (parseInt(ref.style.width, 10) * currentAsset.dimensions.width) / 600;
+                        const actualHeight = (parseInt(ref.style.height, 10) * currentAsset.dimensions.width) / 600;
+                        const actualX = (position.x * currentAsset.dimensions.width) / 600;
+                        const actualY = (position.y * currentAsset.dimensions.width) / 600;
                         setAdjustments(prev => ({
                           ...prev,
                           logoOverlays: prev.logoOverlays.map(l =>
                             l.id === logoOverlay.id ? {
                               ...l,
-                              width: parseInt(ref.style.width, 10),
-                              height: parseInt(ref.style.height, 10),
-                              ...position,
+                              width: actualWidth,
+                              height: actualHeight,
+                              x: actualX,
+                              y: actualY,
                             } : l
                           ),
                         }));
@@ -498,6 +632,8 @@ const AdjustImagePage: React.FC = () => {
                       }}
                       bounds="parent"
                       className="logo-overlay"
+                      minWidth={20}
+                      minHeight={20}
                     >
                       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                         <img

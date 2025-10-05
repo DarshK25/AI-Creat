@@ -214,11 +214,12 @@ export interface UploadResponse {
 
 // Download Types
 export interface DownloadRequest {
-  asset_ids: string[];
-  format?: 'zip' | 'individual';
+  assetIds: string[];
+  format: 'jpeg' | 'png';
+  quality: 'high' | 'medium' | 'low';
+  grouping: 'individual' | 'batch' | 'category';
 }
 
 export interface DownloadResponse {
-  download_url: string;
-  expires_at: string;
+  downloadUrl: string;
 }

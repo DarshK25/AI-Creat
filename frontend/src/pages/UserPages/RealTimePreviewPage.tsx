@@ -154,26 +154,51 @@ const RealTimePreviewPage: React.FC = () => {
     }
 
     try {
-      // Create download request
+      // Map UI values to backend expected values
+      const formatMap: { [key: string]: 'jpeg' | 'png' } = {
+        'JPEG': 'jpeg',
+        'PNG': 'png',
+        'PSD': 'jpeg' // PSD not supported, fallback to JPEG
+      };
+
+      const qualityMap: { [key: string]: 'high' | 'medium' | 'low' } = {
+        'High': 'high',
+        'Medium': 'medium',
+        'Low': 'low'
+      };
+
+      const groupingMap: { [key: string]: 'individual' | 'batch' | 'category' } = {
+        'Individual': 'individual',
+        'Batch': 'batch'
+      };
+
+      // Create download request with correct format
       const downloadData = {
         assetIds: selectedAssets,
-        format: downloadFormat.toLowerCase(),
-        quality: imageQuality.toLowerCase(),
-        downloadType: downloadOption.toLowerCase()
+        format: formatMap[downloadFormat] || 'jpeg',
+        quality: qualityMap[imageQuality] || 'high',
+        grouping: groupingMap[downloadOption] || 'batch'
       };
 
       // Call download API
       const response = await generation.downloadAssets(downloadData);
-      
-      // Handle download response (this would typically trigger a file download)
+
+      // Handle download response
       if (response.downloadUrl) {
-        window.open(response.downloadUrl, '_blank');
+        // Create a temporary link to trigger download
+        const link = document.createElement('a');
+        link.href = response.downloadUrl;
+        link.download = `assets_${downloadOption.toLowerCase()}_${Date.now()}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       }
-      
+
       setShowBatchDownload(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Download failed:', error);
-      alert('Download failed. Please try again.');
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Download failed. Please try again.';
+      alert(errorMessage);
     }
   };
 
@@ -367,12 +392,28 @@ const RealTimePreviewPage: React.FC = () => {
                                       (e.target as HTMLImageElement).style.display = 'none';
                                     }}
                                   />
-                                  <button 
-                                    className="edit-more-button"
-                                    onClick={() => navigate(`/adjust-img?assetId=${asset.id}`)}
-                                  >
-                                    Edit More
-                                  </button>
+                                  <div className="asset-actions">
+                                    <button
+                                      className="edit-more-button"
+                                      onClick={() => navigate(`/adjust-img?assetId=${asset.id}`)}
+                                    >
+                                      Edit More
+                                    </button>
+                                    <button
+                                      className="download-single-button"
+                                      onClick={async () => {
+                                        try {
+                                          await generation.downloadSingleAsset(asset.id);
+                                        } catch (error: any) {
+                                          console.error('Download failed:', error);
+                                          alert('Download failed. Please try again.');
+                                        }
+                                      }}
+                                      title="Download this asset"
+                                    >
+                                      <i className="fas fa-download"></i>
+                                    </button>
+                                  </div>
                                 </div>
                                 <div className="asset-footer">
                                   <span className="asset-type">{asset.formatName}</span>
@@ -436,7 +477,7 @@ const RealTimePreviewPage: React.FC = () => {
             <div className="batch-download-sidebar">
               <div className="batch-download-header">
                 <h3>Batch Download</h3>
-                <button 
+                <button
                   className="close-button"
                   onClick={() => setShowBatchDownload(false)}
                 >
@@ -447,8 +488,8 @@ const RealTimePreviewPage: React.FC = () => {
               <div className="batch-download-content">
                 <div className="download-section">
                   <h4>File Formats</h4>
-                  <select 
-                    value={downloadFormat} 
+                  <select
+                    value={downloadFormat}
                     onChange={(e) => setDownloadFormat(e.target.value as 'JPEG' | 'PNG' | 'PSD')}
                     className="format-select"
                   >
@@ -460,8 +501,8 @@ const RealTimePreviewPage: React.FC = () => {
 
                 <div className="download-section">
                   <h4>Image Quality (PPI)</h4>
-                  <select 
-                    value={imageQuality} 
+                  <select
+                    value={imageQuality}
                     onChange={(e) => setImageQuality(e.target.value as 'High' | 'Medium' | 'Low')}
                     className="quality-select"
                   >
@@ -473,8 +514,8 @@ const RealTimePreviewPage: React.FC = () => {
 
                 <div className="download-section">
                   <h4>Download Options</h4>
-                  <select 
-                    value={downloadOption} 
+                  <select
+                    value={downloadOption}
                     onChange={(e) => setDownloadOption(e.target.value as 'Batch' | 'Individual')}
                     className="option-select"
                   >
@@ -487,7 +528,7 @@ const RealTimePreviewPage: React.FC = () => {
                   <p>Download All generated Versions ({selectedAssets.length})</p>
                 </div>
 
-                <button 
+                <button
                   className="download-button"
                   onClick={handleBatchDownload}
                   disabled={selectedAssets.length === 0}

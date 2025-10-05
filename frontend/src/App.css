@@ -2706,6 +2706,84 @@ ownload Modal */
   background-color: #3A8EEF;
 }
 
+/* Download single asset button */
+.download-single-button {
+  background: rgba(20, 158, 202, 0.1);
+  border: 1px solid #149ECA;
+  color: #149ECA;
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: 0.5rem;
+}
+
+.download-single-button:hover {
+  background-color: #149ECA;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* Asset actions container */
+.asset-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Top bar actions container */
+.top-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Crop selection area styling */
+.crop-selection-area {
+  border: 2px dashed #149ECA !important;
+  background-color: rgba(20, 158, 202, 0.1) !important;
+  cursor: move;
+}
+
+.crop-selection-area:hover {
+  border-color: #1fb6e4 !important;
+  background-color: rgba(20, 158, 202, 0.2) !important;
+}
+
+/* Text and logo overlay styling */
+.text-overlay, .logo-overlay {
+  border: 1px solid rgba(20, 158, 202, 0.5);
+  background-color: rgba(20, 158, 202, 0.05);
+}
+
+.text-overlay:hover, .logo-overlay:hover {
+  border-color: #149ECA;
+  background-color: rgba(20, 158, 202, 0.1);
+}
+
+.overlay-remove-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ff4757;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.overlay-remove-btn:hover {
+  background: #ff3742;
+}
+
 .download-button:disabled {
   background-color: #4F5A65;
   cursor: not-allowed;
