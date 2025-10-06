@@ -1,7 +1,3 @@
-/*
-  This reset ensures your app and its root containers
-  take up the full height and width of the browser window.
-*/
 html, body, #root {
   margin: 0;
   padding: 0;
@@ -9,11 +5,8 @@ html, body, #root {
   width: 100%;
 }
 
-/*
-  This sets the global font and the background for the entire page.
-*/
 body {
-  background-color: #2c3338; /* The dark background color */
+  background-color: #2c3338; 
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
@@ -21,22 +14,15 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/*
-  The main container that now correctly fills its full-sized parent.
-  The flex properties will center the buttons within it.
-*/
 .screen-container {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 100%; /* Fill the full height of the body */
-  width: 100%;  /* Fill the full width of the body */
+  height: 100%; 
+  width: 100%;  
 }
 
-/*
-  Button styling (no changes here)
-*/
 .panel-button {
   background-color: #404a53;
   color: #e0e0e0;
@@ -52,9 +38,6 @@ body {
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-/*
-  The hover animation (no changes here)
-*/
 .panel-button:hover {
   transform: translateY(-5px) scale(1.05);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
@@ -62,19 +45,6 @@ body {
   color: #ffffff;
 }
 
-
-
-
-
-
-
-
-
-/* --- LoginPage CSS --- */
-
-
-
-/* --- Main Page Container --- */
 .login-page-container {
   display: flex;
   justify-content: center;
@@ -85,9 +55,8 @@ body {
   position: relative;
 }
 
-/* --- Login Card --- */
 .login-card {
-  background-color: #2C3338; /* CORRECTED: The card's background color */
+  background-color: #2C3338; 
   border-radius: 12px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
   padding: 2.5rem 3rem;
@@ -98,7 +67,6 @@ body {
   gap: 1.2rem;
 }
 
-/* --- Logo Section inside the card --- */
 .login-logo-section {
   display: flex;
   align-items: center;
@@ -126,7 +94,6 @@ body {
   margin-bottom: 1rem;
 }
 
-/* --- Form Group & Labels --- */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -136,14 +103,13 @@ body {
 
 .form-group label {
   font-size: 0.95rem;
-  color: #8A939C; /* CORRECTED: Muted gray label color */
+  color: #8A939C; 
   font-weight: 500;
 }
 
-/* --- Input Fields (with corrected colors) --- */
 .form-input {
-  background-color: #4d4e4e54; /* CORRECTED: Same as the new page background */
-  border: 1px solid #383e44; /* CORRECTED: More subtle border */
+  background-color: #4d4e4e54; 
+  border: 1px solid #383e44; 
   border-radius: 8px;
   padding: 1rem 1rem;
   color: #e0e0e0;
@@ -157,17 +123,16 @@ body {
 }
 
 .form-input:focus {
-  border-color: #149ECA; /* CORRECTED: Matches new button color */
-  box-shadow: 0 0 0 3px rgba(20, 158, 202, 0.25); /* CORRECTED: Glow matches new color */
+  border-color: #149ECA; 
+  box-shadow: 0 0 0 3px rgba(20, 158, 202, 0.25); 
 }
 
 .form-input:hover {
   border-color: #1fb6e4;
 }
 
-/* --- Forgot Password Link --- */
 .forgot-password-link {
-  color: #149ECA; /* CORRECTED: Vibrant cyan/blue color */
+  color: #149ECA; 
   font-size: 0.9rem;
   text-decoration: none;
   align-self: flex-start;
@@ -176,13 +141,12 @@ body {
 }
 
 .forgot-password-link:hover {
-  color: #1fb6e4; /* Lighter shade on hover */
+  color: #1fb6e4; 
   text-decoration: underline;
 }
 
-/* --- Login Button (with corrected colors) --- */
 .login-button {
-  background-color: #149ECA; /* CORRECTED: Vibrant cyan/blue color */
+  background-color: #149ECA; 
   color: #ffffff;
   border: none;
   border-radius: 32px;
@@ -196,7 +160,7 @@ body {
 }
 
 .login-button:hover {
-  background-color: #118cb3; /* Darker shade on hover */
+  background-color: #118cb3; 
   transform: translateY(-3px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
 }
@@ -206,7 +170,6 @@ body {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
-/* --- Top-Left Logo --- */
 .top-left-logo {
   position: absolute;
   top: 2rem;
@@ -227,7 +190,6 @@ body {
   font-weight: 700;
 }
 
-/* --- Media query is unchanged --- */
 @media (max-width: 600px) {
   .login-card {
     padding: 2rem;
@@ -245,71 +207,54 @@ body {
   }
 }
 
-/* --- Password Input with Toggle Icon --- */
-
-/* 1. Set the parent container for positioning */
 .form-group {
   position: relative;
 }
 
-/* 2. Adjust input padding to make space for the icon */
-/* Make sure this rule is specific enough if you have other .form-input styles */
 .form-group input.form-input[type="password"],
 .form-group input.form-input[type="text"] {
-  /* Add padding on the right to prevent text from overlapping the icon */
-  padding-right: 3.5rem; /* 50-60px is usually a good value */
+  padding-right: 3.5rem; 
 }
 
 
-/* 3. Style and position the toggle button */
 .password-toggle-btn {
-  /* Positioning */
   position: absolute;
-  top: 55px; /* Adjust this value to vertically center the icon with your input's height */
+  top: 55px; 
   right: 15px;
-  transform: translateY(-50%); /* Perfect vertical centering trick */
+  transform: translateY(-50%); 
   
-  /* Styling */
   background: none;
   border: none;
   cursor: pointer;
-  color: #8A939C; /* Muted icon color */
+  color: #8A939C; 
   padding: 0;
   
-  /* ✨ Amazing Hover Animation ✨ */
   transition: all 0.2s ease-in-out;
 }
 
 .password-toggle-btn:hover {
-  color: #ffffff; /* Brighter color on hover */
-  transform: translateY(-50%) scale(1.1); /* Lifts and slightly enlarges the icon */
+  color: #ffffff; 
+  transform: translateY(-50%) scale(1.1); 
 }
 
 input::-ms-reveal {
   display: none;
 }
 
-
-
-
-/* --- DashboardPage CSS --- */
-
-/* --- Dashboard Container --- */
 .dashboard-container {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
 }
 
-/* --- Top Navigation Bar --- */
 .navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #2C3338; /* Navbar background */
+  background-color: #2C3338; 
   padding: 1rem 2rem;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  min-height: 60px; /* Ensure consistent height */
+  min-height: 60px; 
   box-sizing: border-box;
 }
 
@@ -342,11 +287,10 @@ input::-ms-reveal {
   gap: 1.5rem;
 }
 
-/* --- Navbar Right Section --- */
 .navbar-right {
   display: flex;
   align-items: center;
-  gap: 0.75rem; /* Adds a little space between items */
+  gap: 0.75rem; 
 }
 
 .icon-button {
@@ -355,16 +299,15 @@ input::-ms-reveal {
   color: #8A939C;
   font-size: 1.2rem;
   cursor: pointer;
-  width: 40px; /* Set fixed width */
-  height: 40px; /* Set fixed height */
-  border-radius: 50%; /* Make it round */
+  width: 40px; 
+  height: 40px; 
+  border-radius: 50%; 
   display: flex;
   justify-content: center;
   align-items: center;
   transition: color 0.3s ease, background-color 0.3s ease;
 }
 
-/* ✨ Icon Button Hover Animation ✨ */
 .icon-button:hover {
   color: #ffffff;
   background-color: rgba(255, 255, 255, 0.1);
@@ -375,12 +318,11 @@ input::-ms-reveal {
   height: 36px;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid #149ECA; /* Border around avatar */
+  border: 2px solid #149ECA; 
   margin-left: 0.75rem;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* ✨ User Profile Hover Animation ✨ */
 .user-profile:hover {
   transform: scale(1.1);
   box-shadow: 0 0 10px rgba(20, 158, 202, 0.5);
@@ -389,11 +331,11 @@ input::-ms-reveal {
 .profile-avatar {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* Ensures the image covers the circle */
+  object-fit: cover; 
 }
 
 .nav-item {
-  color: #8A939C; /* Muted text for nav items */
+  color: #8A939C; 
   text-decoration: none;
   font-weight: 500;
   padding: 0.5rem 0.25rem;
@@ -401,7 +343,6 @@ input::-ms-reveal {
   transition: color 0.3s ease;
 }
 
-/* ✨ Navbar Item Hover Animation ✨ */
 .nav-item:hover {
   color: #ffffff;
 }
@@ -418,11 +359,10 @@ input::-ms-reveal {
   bottom: -5px;
   width: 100%;
   height: 2px;
-  background-color: #149ECA; /* Underline for active item */
+  background-color: #149ECA; 
   border-radius: 2px;
 }
 
-/* --- Navbar Right Section --- */
 .icon-button {
   background: none;
   border: none;
@@ -431,11 +371,10 @@ input::-ms-reveal {
   margin-left: 1.2rem;
   cursor: pointer;
   padding: 0.5rem;
-  border-radius: 50%; /* Make it round */
+  border-radius: 50%; 
   transition: color 0.3s ease, background-color 0.3s ease;
 }
 
-/* ✨ Icon Button Hover Animation ✨ */
 .icon-button:hover {
   color: #ffffff;
   background-color: rgba(255, 255, 255, 0.1);
@@ -447,11 +386,10 @@ input::-ms-reveal {
   height: 36px;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid #149ECA; /* Border around avatar */
+  border: 2px solid #149ECA; 
   transition: transform 0.2s ease;
 }
 
-/* ✨ User Profile Hover Animation ✨ */
 .user-profile:hover {
   transform: scale(1.05);
 }
@@ -462,13 +400,11 @@ input::-ms-reveal {
   object-fit: cover;
 }
 
-/* --- Main Content Area --- */
 .main-content {
-  flex-grow: 1; /* Allows content to take up remaining space */
-  width: 100%;    /* Explicitly set width to 100% */
-  box-sizing: border-box; /* Ensures padding is included in the width calculation */
-  padding: 2rem 3rem; /* Adjust padding (top/bottom, left/right) */
-  /* The max-width and margin properties have been removed */
+  flex-grow: 1; 
+  width: 100%;    
+  box-sizing: border-box; 
+  padding: 2rem 3rem; 
 }
 
 .greeting-title {
@@ -484,7 +420,6 @@ input::-ms-reveal {
   margin-bottom: 1.6rem;
 }
 
-/* --- Upload Section --- */
 .upload-section {
   background-color: #2C3338;
   border-radius: 12px;
@@ -496,7 +431,7 @@ input::-ms-reveal {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  border: 2px dashed #4F5A65; /* Dashed border */
+  border: 2px dashed #4F5A65; 
   border-radius: 8px;
   padding: 3rem 2rem;
   text-align: center;
@@ -504,22 +439,20 @@ input::-ms-reveal {
   cursor: pointer;
 }
 
-/*Upload Box Hover Animation ✨ */
 .upload-box:hover {
-  border-color: #149ECA; /* Highlight border on hover */
-  background-color: rgba(20, 158, 202, 0.05); /* Subtle background tint */
+  border-color: #149ECA; 
+  background-color: rgba(20, 158, 202, 0.05); 
 }
 
 .upload-icon {
   font-size: 3rem;
-  color: #4F5A65; /* Muted icon color */
+  color: #4F5A65; 
   margin-bottom: 1rem;
   transition: color 0.3s ease;
 }
 
-/* ✨ Upload Icon Hover Animation (inside box) ✨ */
 .upload-box:hover .upload-icon {
-  color: #149ECA; /* Highlight icon on hover */
+  color: #149ECA; 
 }
 
 .upload-text {
@@ -528,18 +461,17 @@ input::-ms-reveal {
 }
 
 .upload-browse-link {
-  color: #149ECA; /* Vibrant link color */
+  color: #149ECA; 
   text-decoration: none;
   font-weight: 600;
   transition: color 0.3s ease;
 }
 
 .upload-browse-link:hover {
-  color: #1fb6e4; /* Lighter on hover */
+  color: #1fb6e4; 
   text-decoration: underline;
 }
 
-/* --- Recent Projects Section --- */
 .section-header {
   display: flex;
   justify-content: space-between;
@@ -565,11 +497,10 @@ input::-ms-reveal {
   text-decoration: underline;
 }
 
-/* --- Projects List --- */
 .projects-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem; /* Space between project items */
+  gap: 0.75rem; 
 }
 
 .project-item {
@@ -577,38 +508,37 @@ input::-ms-reveal {
   border-radius: 8px;
   padding: 1rem 1.5rem;
   display: grid;
-  grid-template-columns: 1.8fr 0.8fr 0.8fr 0.8fr 1.2fr 1fr; /* Adjust column widths */
+  grid-template-columns: 1.8fr 0.8fr 0.8fr 0.8fr 1.2fr 1fr; 
   align-items: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: background-color 0.3s ease, transform 0.2s ease;
   cursor: pointer;
 }
 
-/* ✨ Project Item Hover Animation ✨ */
 .project-item:hover {
-  background-color: #383e44; /* Slightly lighter on hover */
-  transform: translateY(-3px); /* Lifts the item */
+  background-color: #383e44; 
+  transform: translateY(-3px); 
 }
 
 .project-col {
   display: flex;
   flex-direction: column;
-  color: #8A939C; /* Muted text for labels */
+  color: #8A939C; 
   font-size: 0.85rem;
 }
 
-.project-col span:first-child { /* Label text (e.g., "Batch ID") */
+.project-col span:first-child { 
   margin-bottom: 0.2rem;
 }
 
 .project-value {
-  color: #e0e0e0; /* Brighter for actual values */
+  color: #e0e0e0; 
   font-weight: 600;
   font-size: 0.95rem;
 }
 
 .project-id {
-  flex-direction: row; /* For Batch ID, icon and text are inline */
+  flex-direction: row; 
   align-items: center;
   gap: 0.75rem;
 }
@@ -624,39 +554,37 @@ input::-ms-reveal {
   font-size: 0.8rem;
   font-weight: 600;
   text-align: center;
-  width: fit-content; /* Adjust width to content */
+  width: fit-content; 
 }
 
-/* Status specific colors */
 .status-uploaded {
-  background-color: rgba(4, 175, 120, 0.15); /* Greenish background */
-  color: #04AF78; /* Green text */
+  background-color: rgba(4, 175, 120, 0.15); 
+  color: #04AF78; 
 }
 
 .status-processing {
-  background-color: rgba(255, 193, 7, 0.15); /* Yellowish background */
-  color: #FFC107; /* Yellow text */
+  background-color: rgba(255, 193, 7, 0.15); 
+  color: #FFC107; 
 }
 
 .status-downloaded {
-  background-color: rgba(20, 158, 202, 0.15); /* Cyan background */
-  color: #149ECA; /* Cyan text */
+  background-color: rgba(20, 158, 202, 0.15); 
+  color: #149ECA; 
 }
 
-/* --- Media Queries for Responsiveness --- */
 @media (max-width: 992px) {
   .projects-list {
     display: flex;
-    flex-direction: column; /* Stack items on smaller screens */
+    flex-direction: column; 
     gap: 1rem;
   }
   .project-item {
-    grid-template-columns: 1fr; /* Each item takes full width */
+    grid-template-columns: 1fr; 
     padding: 1.2rem;
     gap: 0.8rem;
   }
   .project-col {
-    flex-direction: row; /* Labels and values side by side */
+    flex-direction: row; 
     justify-content: space-between;
     align-items: center;
     font-size: 0.9rem;
@@ -670,7 +598,7 @@ input::-ms-reveal {
   .project-id {
     justify-content: flex-start;
   }
-  .project-id span:first-of-type { /* Hide 'Batch ID' label on small screens */
+  .project-id span:first-of-type { 
     display: none;
   }
   .project-id .project-value {
@@ -684,13 +612,13 @@ input::-ms-reveal {
     padding: 1rem 1rem;
   }
   .navbar-nav {
-    display: none; /* Hide nav items on small screens for simplicity */
+    display: none; 
   }
   .navbar-logo {
       margin-right: 0;
   }
   .navbar-right {
-      gap: 0.5rem; /* Reduce space between icons */
+      gap: 0.5rem; 
   }
   .icon-button {
       margin-left: 0.5rem;
@@ -714,7 +642,7 @@ input::-ms-reveal {
 
 @media (max-width: 576px) {
     .navbar-logo .logo-text {
-        display: none; /* Hide 'AI CREAT' text next to logo on very small screens */
+        display: none; 
     }
     .main-content {
         padding: 1rem;
@@ -727,24 +655,15 @@ input::-ms-reveal {
     }
 }
 
-
-
-
-
-
-
-
-
-/* --- AI Preview Section --- */
 .ai-preview-section {
-  margin-top: 2.5rem; /* Space from previous sections */
+  margin-top: 2.5rem; 
   margin-bottom: 2.5rem;
 }
 
 .ai-preview-header {
   display: flex;
   justify-content: space-between;
-  align-items: center; /* Align text to top, button to bottom */
+  align-items: center; 
   margin-bottom: 1.5rem;
 }
 
@@ -759,11 +678,11 @@ input::-ms-reveal {
   font-size: 0.95rem;
   color: #8A939C;
   line-height: 1.4;
-  max-width: 800px; /* Prevent text from being too wide */
+  max-width: 800px; 
 }
 
 .resize-repurpose-button {
-  background-color: #2c3338; 
+  background-color: #2c3338;  
   color: #149ECA;
   border: 1px solid #149ECA;
   border-radius: 32px;
@@ -775,7 +694,6 @@ input::-ms-reveal {
   transition: all 0.3s ease;
 }
 
-/* ✨ Button Hover Animation ✨ */
 .resize-repurpose-button:hover {
   background-color: #118cb3;
   color: white;
@@ -788,7 +706,6 @@ input::-ms-reveal {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 
-/* --- Preview Content Area --- */
 .preview-content-area {
   background-color: #4d4e4e54;
   border-radius: 12px;
@@ -809,15 +726,14 @@ input::-ms-reveal {
   font-size: 0.95rem;
 }
 
-/* --- File Preview Grid --- */
 .file-preview-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Responsive grid */
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
   gap: 1.5rem;
 }
 
 .file-card {
-  background-color: #202528; /* Darker background for each card */
+  background-color: #202528; 
   border-radius: 10px;
   border: 1px solid #8A939C;
   padding: 1rem;
@@ -827,7 +743,6 @@ input::-ms-reveal {
   cursor: pointer;
 }
 
-/* ✨ File Card Hover Animation ✨ */
 .file-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
@@ -842,18 +757,17 @@ input::-ms-reveal {
 }
 
 .file-thumbnail {
-  background-color: #383e44; /* Placeholder background for thumbnail */
+  background-color: #383e44; 
   border-radius: 6px;
-  height: 150px; /* Fixed height for thumbnails */
+  height: 150px; 
   margin-bottom: 1rem;
   display: flex;
   justify-content: center;
   align-items: center;
-  color: #8A939C; /* Placeholder text color */
+  color: #8A939C; 
   font-size: 0.9rem;
-  overflow: hidden; /* Important for future images */
+  overflow: hidden; 
 }
-/* If you want to put an actual image, you'd target img inside .file-thumbnail */
 .file-thumbnail img {
     width: 100%;
     height: 100%;
@@ -877,7 +791,7 @@ input::-ms-reveal {
 }
 
 .check-icon {
-  color: #04AF78; /* Green checkmark */
+  color: #04AF78; 
 }
 
 .file-info {
@@ -886,7 +800,6 @@ input::-ms-reveal {
   margin-top: 0.5rem;
 }
 
-/* --- Media Queries for Responsiveness --- */
 @media (max-width: 768px) {
   .ai-preview-header {
     flex-direction: column;
@@ -904,15 +817,9 @@ input::-ms-reveal {
     padding: 1.5rem;
   }
   .file-preview-grid {
-    grid-template-columns: 1fr; /* Stack cards on very small screens */
+    grid-template-columns: 1fr; 
   }
 }
-
-
-
-
-
-/* --- Main Selection Page ---*/
 
 .selection-main-content {
   padding: 2rem 3rem;
@@ -955,7 +862,6 @@ input::-ms-reveal {
   transform: translateY(-2px);
 }
 
-/* --- Tabs --- */
 .selection-tabs {
   
   display: flex;
@@ -988,7 +894,6 @@ input::-ms-reveal {
   background-color: #149ECA;
 }
 
-/* --- Main Columns Layout --- */
 .selection-columns {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
@@ -1029,14 +934,12 @@ input::-ms-reveal {
 
 .select-all-button:hover { color: #1fb6e4; }
 
-/* --- Template List --- */
 .template-list {
   max-height: 55vh;
   overflow-y: auto;
   padding-right: 0.5rem;
 }
 
-/* ✨ NEW: Custom Scrollbar for Template List ✨ */
 .template-list::-webkit-scrollbar {
   width: 8px;
 }
@@ -1094,7 +997,7 @@ input::-ms-reveal {
   margin-right: 1rem;
   display: inline-block;
   position: relative;
-  flex-shrink: 0; /* Prevent checkbox from shrinking */
+  flex-shrink: 0; 
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
@@ -1141,7 +1044,6 @@ input::-ms-reveal {
   font-size: 0.85rem;
 }
 
-/* --- Aspect Ratio Icons --- */
 .aspect-ratio-icon {
   width: 24px;
   height: 24px;
@@ -1157,7 +1059,6 @@ input::-ms-reveal {
 .ratio-skyscraper { width: 8px; height: 24px; }
 .ratio-square { width: 24px; height: 24px; }
 
-/* --- Custom Column --- */
 .custom-form .form-group {
   margin-bottom: 1.5rem;
 }
@@ -1214,10 +1115,7 @@ input::-ms-reveal {
   pointer-events: none;
 }
 
-/* --- START: Repurposing Tab Styles --- */
-
 .repurposing-container {
-  /* This container is the root for the new grid view */
 }
 
 .select-all-global-label {
@@ -1231,7 +1129,6 @@ input::-ms-reveal {
   cursor: pointer;
 }
 
-/* This re-uses the custom checkbox styles from the 'Resizing' tab */
 .select-all-global-label input[type="checkbox"] {
   opacity: 0;
   position: absolute;
@@ -1240,7 +1137,6 @@ input::-ms-reveal {
 
 .repurposing-grid {
   display: grid;
-  /* Creates 4 columns on large screens, responsive on smaller ones */
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
 }
@@ -1255,7 +1151,6 @@ input::-ms-reveal {
   border: 1px solid transparent;
 }
 
-/* ✨ Card Hover Animation ✨ */
 .platform-card:hover {
   border-color: #383e44;
   transform: translateY(-5px);
@@ -1305,7 +1200,6 @@ input::-ms-reveal {
   cursor: pointer;
 }
 
-/* Re-using the same custom checkbox from the previous screen */
 .platform-item input[type="checkbox"] {
   opacity: 0;
   position: absolute;
@@ -1337,9 +1231,6 @@ input::-ms-reveal {
   border-radius: 4px;
   cursor: pointer;
 }
-/* --- END: Multi-Channel Selection Page Styles --- */
-
-/* --- START: Real-Time Preview Page Styles --- */
 .generation-status {
   display: flex;
   flex-direction: column;
@@ -1473,15 +1364,7 @@ input::-ms-reveal {
 .show-button:hover {
   background: #ff3742;
 }
-/* --- END: Real-Time Preview Page Styles --- */
 
-
-
-
-
-
-
-/* --- Main Preview Page Layout --- */
 .preview-main-content {
   padding: 2rem 3rem;
 }
@@ -1532,7 +1415,7 @@ input::-ms-reveal {
   border-bottom: 1px solid #383e44;
   margin-bottom: 2rem;
 }
-.preview-tabs .tab-item { /* Re-using tab styles */
+.preview-tabs .tab-item { 
   background: none; border: none; color: #8A939C; font-size: 1rem;
   font-weight: 500; padding: 0 0.25rem 1rem 0.25rem; cursor: pointer;
   position: relative; transition: color 0.3s ease;
@@ -1550,7 +1433,6 @@ input::-ms-reveal {
   align-items: flex-start;
 }
 
-/* --- Generated Assets Section (Left) --- */
 .generated-assets-section {
   flex: 1;
 }
@@ -1562,7 +1444,6 @@ input::-ms-reveal {
   margin-bottom: 1.5rem;
 }
 
-/* Re-using custom checkbox styles */
 .custom-checkbox-label {
   display: flex;
   align-items: center;
@@ -1573,7 +1454,7 @@ input::-ms-reveal {
   cursor: pointer;
 }
 .custom-checkbox-label input { display: none; }
-.custom-checkbox-label .custom-checkbox { /* Styles from previous components */ }
+.custom-checkbox-label .custom-checkbox { }
 
 
 .group-by-wrapper {
@@ -1590,7 +1471,6 @@ input::-ms-reveal {
   padding: 0.5rem 0.8rem;
 }
 
-/* Accordion Styles */
 .accordion-item {
   background-color: #2C3338;
   border-radius: 12px;
@@ -1638,11 +1518,10 @@ input::-ms-reveal {
   padding: 0 1.5rem;
 }
 .accordion-item.is-open .accordion-content {
-  max-height: 1000px; /* Animate to a large height */
+  max-height: 1000px; 
   padding: 1rem 1.5rem 1.5rem 1.5rem;
 }
 
-/* Asset Grid */
 .asset-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -1683,7 +1562,6 @@ input::-ms-reveal {
   align-items: center;
 }
 
-/* ✨ Edit More Button Hover Animation ✨ */
 .edit-more-button {
   position: absolute;
   background-color: rgba(44, 51, 56, 0.8);
@@ -1710,7 +1588,6 @@ input::-ms-reveal {
   justify-content: space-between;
 }
 
-/* NSFW Card Styles */
 .asset-card.is-nsfw {
   background-color: #2C3338;
   border-color: #483437;
@@ -1736,7 +1613,6 @@ input::-ms-reveal {
   cursor: pointer;
 }
 
-/* --- Adjust Resolution Sidebar (Right) --- */
 .adjust-resolution-sidebar {
   width: 320px;
   flex-shrink: 0;
@@ -1791,7 +1667,6 @@ input::-ms-reveal {
   white-space: nowrap;
 }
 
-/* ✨ Custom Range Slider ✨ */
 .resolution-slider {
   -webkit-appearance: none;
   appearance: none;
@@ -1820,15 +1695,12 @@ input::-ms-reveal {
   border: 3px solid #ffffff;
 }
 
-
-
-/* --- Adjust Image Page Layout --- */
 .adjust-image-main-content {
   padding: 1.5rem 3rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  height: calc(100vh - 70px); /* Adjust based on navbar height */
+  height: calc(100vh - 70px); 
 }
 
 .top-bar {
@@ -1882,15 +1754,13 @@ input::-ms-reveal {
   box-shadow: 0 5px 15px rgba(20, 158, 202, 0.3);
 }
 
-/* --- Content Area: Canvas + Sidebar --- */
 .content-area {
   flex-grow: 1;
   display: flex;
   gap: 2rem;
-  overflow: hidden; /* To prevent overflow from canvas or sidebar */
+  overflow: hidden; 
 }
 
-/* Left: Image Canvas */
 .image-canvas-wrapper {
   flex: 1;
   background-color: #2C3338;
@@ -1950,8 +1820,8 @@ input::-ms-reveal {
 
 .editable-image {
   position: relative;
-  width: 600px; /* Example fixed size for the image holder */
-  height: 600px; /* Example fixed size for the image holder */
+  width: 600px; 
+  height: 600px; 
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -1971,7 +1841,6 @@ input::-ms-reveal {
   box-sizing: border-box;
 }
 
-/* Draggable Handles for Crop Area */
 .handle {
   position: absolute;
   width: 12px;
@@ -1980,11 +1849,10 @@ input::-ms-reveal {
   border: 1px solid #149ECA;
   border-radius: 2px;
   z-index: 10;
-  opacity: 0; /* Hidden by default */
+  opacity: 0; 
   transition: opacity 0.2s ease;
 }
 
-/* ✨ Handle Hover Animation (appears on crop area hover) ✨ */
 .crop-selection-area:hover .handle {
   opacity: 1;
 }
@@ -1999,7 +1867,6 @@ input::-ms-reveal {
 .handle.right-center { right: -6px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
 
 
-/* Right: Adjustments Sidebar */
 .adjustments-sidebar {
   width: 320px;
   flex-shrink: 0;
@@ -2055,7 +1922,6 @@ input::-ms-reveal {
 }
 
 .slider-control {
-  /* Re-use from previous pages if applicable, otherwise define here */
 }
 .slider-control label {
   display: block;
@@ -2075,11 +1941,10 @@ input::-ms-reveal {
   border-radius: 6px;
   font-size: 0.9rem;
   white-space: nowrap;
-  min-width: 45px; /* Ensure consistent width for the value display */
+  min-width: 45px; 
   text-align: center;
 }
 
-/* Custom Range Slider (Re-using from previous pages but slightly adjusting if needed) */
 .custom-range-slider {
   -webkit-appearance: none;
   appearance: none;
@@ -2102,7 +1967,7 @@ input::-ms-reveal {
 }
 .custom-range-slider::-webkit-slider-thumb:active {
   cursor: grabbing;
-  background-color: #1FB6E4; /* Lighter blue when dragging */
+  background-color: #1FB6E4; 
 }
 .custom-range-slider::-moz-range-thumb {
   width: 18px;
@@ -2115,27 +1980,9 @@ input::-ms-reveal {
 }
 .custom-range-slider::-moz-range-thumb:active {
   cursor: grabbing;
-  background-color: #1FB6E4; /* Lighter blue when dragging */
+  background-color: #1FB6E4; 
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* --- Loading Spinner --- */
 .loading-spinner {
   width: 40px;
   height: 40px;
@@ -2160,7 +2007,6 @@ input::-ms-reveal {
   color: #8A939C;
 }
 
-/* --- Error States --- */
 .error-message {
   display: flex;
   align-items: center;
@@ -2208,7 +2054,6 @@ input::-ms-reveal {
   background-color: #c82333;
 }
 
-/* --- Empty States --- */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -2264,7 +2109,6 @@ input::-ms-reveal {
   transform: translateY(-2px);
 }
 
-/* --- Improved File Thumbnail --- */
 .file-thumbnail {
   position: relative;
   background-color: #383e44;
@@ -2299,7 +2143,6 @@ input::-ms-reveal {
   border-radius: 6px;
 }
 
-/* --- Platform Count Styling --- */
 .platform-count {
   font-size: 0.8rem;
   color: #8A939C;
@@ -2307,7 +2150,6 @@ input::-ms-reveal {
   margin-left: 0.5rem;
 }
 
-/* --- Item Details Styling --- */
 .item-details {
   display: flex;
   flex-direction: column;
@@ -2320,7 +2162,6 @@ input::-ms-reveal {
   margin-bottom: 0.2rem;
 }
 
-/* --- Unsaved Changes Notice --- */
 .unsaved-changes-notice {
   display: flex;
   align-items: center;
@@ -2338,7 +2179,6 @@ input::-ms-reveal {
   font-size: 1rem;
 }
 
-/* --- Project Selector --- */
 .project-selector {
   background-color: #202528;
   border: 1px solid #4F5A65;
@@ -2368,7 +2208,6 @@ input::-ms-reveal {
   align-items: center;
 }
 
-/* --- Responsive Improvements --- */
 @media (max-width: 768px) {
   .selection-header {
     flex-direction: column;
@@ -2391,8 +2230,7 @@ input::-ms-reveal {
     width: 100%;
     justify-content: center;
   }
-}/* 
---- Error Boundary Styles --- */
+}
 .error-boundary {
   display: flex;
   align-items: center;
@@ -2420,8 +2258,7 @@ input::-ms-reveal {
 .error-boundary-content p {
   margin-bottom: 2rem;
   color: #8A939C;
-}/
-* --- File Type Placeholder Improvements --- */
+}
 .thumbnail-placeholder {
   position: relative;
   width: 100%;
@@ -2449,7 +2286,6 @@ input::-ms-reveal {
   letter-spacing: 0.5px;
 }
 
-/* --- File Card Improvements --- */
 .file-card {
   background-color: #202528;
   border-radius: 10px;
@@ -2480,7 +2316,6 @@ input::-ms-reveal {
   color: #149ECA;
 }
 
-/* --- File Details Improvements --- */
 .detected-item {
   display: flex;
   align-items: center;
@@ -2511,7 +2346,6 @@ input::-ms-reveal {
   word-break: break-word;
 }
 
-/* --- Processing Status Improvements --- */
 .detected-item:first-child {
   margin-top: 0.5rem;
 }
@@ -2520,7 +2354,6 @@ input::-ms-reveal {
   margin-bottom: 0.5rem;
 }
 
-/* --- Responsive File Grid --- */
 @media (max-width: 768px) {
   .file-preview-grid {
     grid-template-columns: 1fr;
@@ -2534,8 +2367,7 @@ input::-ms-reveal {
   .thumbnail-placeholder i {
     font-size: 2rem;
   }
-}/* 
---- File Type Text in Thumbnail --- */
+}
 .file-type-text {
   position: absolute;
   bottom: 8px;
@@ -2566,7 +2398,6 @@ input::-ms-reveal {
   margin-bottom: 0.5rem;
 }
 
-/* --- Debug Info Styling --- */
 .debug-info {
   background: rgba(255, 255, 0, 0.1);
   border: 1px solid rgba(255, 255, 0, 0.3);
@@ -2577,8 +2408,6 @@ input::-ms-reveal {
   color: #ffc107;
   font-family: monospace;
 }
-/* Batch D
-ownload Modal */
 .batch-download-modal {
   position: fixed;
   top: 0;
@@ -2706,7 +2535,6 @@ ownload Modal */
   background-color: #3A8EEF;
 }
 
-/* Download single asset button */
 .download-single-button {
   background: rgba(20, 158, 202, 0.1);
   border: 1px solid #149ECA;
@@ -2725,21 +2553,18 @@ ownload Modal */
   transform: translateY(-1px);
 }
 
-/* Asset actions container */
 .asset-actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-/* Top bar actions container */
 .top-bar-actions {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-/* Crop selection area styling */
 .crop-selection-area {
   border: 2px dashed #149ECA !important;
   background-color: rgba(20, 158, 202, 0.1) !important;
@@ -2751,7 +2576,6 @@ ownload Modal */
   background-color: rgba(20, 158, 202, 0.2) !important;
 }
 
-/* Text and logo overlay styling */
 .text-overlay, .logo-overlay {
   border: 1px solid rgba(20, 158, 202, 0.5);
   background-color: rgba(20, 158, 202, 0.05);
@@ -2788,8 +2612,7 @@ ownload Modal */
   background-color: #4F5A65;
   cursor: not-allowed;
   opacity: 0.6;
-}/
-* Manual Editing Enhancements */
+}
 .add-content-buttons {
   display: flex;
   flex-direction: column;
@@ -2820,7 +2643,6 @@ ownload Modal */
   transform: translateY(-2px);
 }
 
-/* Text and Logo Overlays */
 .text-overlay,
 .logo-overlay {
   position: absolute;
@@ -2861,7 +2683,6 @@ ownload Modal */
   opacity: 1;
 }
 
-/* Dialog Modals */
 .overlay-dialog {
   position: fixed;
   top: 0;
