@@ -291,6 +291,20 @@ const AdjustImagePage: React.FC = () => {
       return;
     }
 
+    // Check if there are any changes to apply
+    const hasChanges = adjustments.textOverlays.length > 0 || 
+                      adjustments.logoOverlays.length > 0 || 
+                      adjustments.colorSaturation !== 0 ||
+                      adjustments.cropBox.x !== 0 ||
+                      adjustments.cropBox.y !== 0 ||
+                      adjustments.cropBox.width !== currentAsset.dimensions.width ||
+                      adjustments.cropBox.height !== currentAsset.dimensions.height;
+
+    if (!hasChanges) {
+      setError('No changes to apply');
+      return;
+    }
+
     try {
       setError('');
 
@@ -318,18 +332,32 @@ const AdjustImagePage: React.FC = () => {
         text: overlay.text,
         x: overlay.x / imageDimensions.width,
         y: overlay.y / imageDimensions.height,
-        style_set_id: "00000000-0000-0000-0000-000000000000", // Default style set
-        style_type: "default"
+        style_set_id: null, // Use default style
+        style_type: "content"
       }));
 
-      // Normalize logo overlay positions
-      // Note: For now, we'll skip logo overlays as they require file upload to server
-      // This would need to be implemented with proper file upload functionality
+      // Process logo overlays - upload files to server first
       const normalizedLogoOverlays: any[] = [];
       
-      // TODO: Implement logo file upload to server before applying edits
       if (adjustments.logoOverlays.length > 0) {
-        console.warn('Logo overlays are not yet supported in the backend. Skipping logo overlays.');
+        console.log('Processing logo overlays...');
+        // For now, we'll create placeholder logo overlays
+        // In a full implementation, you would upload the logo files to the server first
+        for (const logoOverlay of adjustments.logoOverlays) {
+          // Skip blob URLs for now - in production you'd upload the file first
+          if (logoOverlay.imageUrl.startsWith('blob:')) {
+            console.warn('Skipping blob URL logo overlay - file upload not implemented');
+            continue;
+          }
+          
+          normalizedLogoOverlays.push({
+            logo_path: logoOverlay.imageUrl, // This should be a server path after upload
+            x: logoOverlay.x / imageDimensions.width,
+            y: logoOverlay.y / imageDimensions.height,
+            width: logoOverlay.width,
+            height: logoOverlay.height
+          });
+        }
       }
 
       // Normalize saturation to -1 to 1 range
@@ -342,23 +370,80 @@ const AdjustImagePage: React.FC = () => {
         logo_overlays: normalizedLogoOverlays,
       };
 
-      console.log('Applying edits:', edits);
+      console.log('Applying edits:', edits);    
+      console.log('Text overlays being sent:', normalizedTextOverlays);
+      console.log('Logo overlays being sent:', normalizedLogoOverlays);
       await applyEditsApi.execute(currentAsset.id, edits);
       setHasUnsavedChanges(false);
 
       // Show success message
       alert('Changes applied successfully!');
       
+      // Clear overlays since they're now part of the image
+      setAdjustments(prev => ({
+        ...prev,
+        textOverlays: [],
+        logoOverlays: [],
+        colorSaturation: 0, // Reset saturation since it's now applied
+        cropBox: {
+          width: currentAsset.dimensions.width,
+          height: currentAsset.dimensions.height,
+          x: 0,
+          y: 0,
+        }
+      }));
+      
       // Refresh the asset to show updated version
-      try {
-        const updatedAsset = await generation.getGeneratedAsset(currentAsset.id);
-        setCurrentAsset(updatedAsset);
-      } catch (refreshError) {
-        console.warn('Could not refresh asset after edit:', refreshError);
-      }
+      const refreshAsset = async (retries = 3) => {
+        for (let i = 0; i < retries; i++) {
+          try {
+            // Wait a bit for the file to be fully written
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+            
+            const updatedAsset = await generation.getGeneratedAsset(currentAsset.id);
+            console.log('Updated asset after edit:', updatedAsset);
+            console.log('Old asset URL:', currentAsset.assetUrl);
+            console.log('New asset URL:', updatedAsset.assetUrl);
+            setCurrentAsset(updatedAsset);
+            
+            // Force image refresh by adding timestamp to URL
+            const imageElement = document.querySelector('.editable-image img') as HTMLImageElement;
+            if (imageElement) {
+              const newUrl = updatedAsset.assetUrl + '?t=' + Date.now();
+              imageElement.src = newUrl;
+            }
+            return; // Success, exit retry loop
+          } catch (refreshError: any) {
+            console.warn(`Attempt ${i + 1} to refresh asset failed:`, refreshError);
+            if (i === retries - 1) {
+              // Last attempt failed
+              console.error('Could not refresh asset after edit:', refreshError);
+              setError(`Edit applied but could not refresh preview: ${refreshError.message}`);
+            }
+          }
+        }
+      };
+      
+      refreshAsset();
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to apply changes';
+      console.error('Error applying edits:', error);
+      let errorMessage = 'Failed to apply changes';
+      
+      if (error?.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      // Add more specific error messages
+      if (errorMessage.includes('No such file or directory')) {
+        errorMessage = 'Image file not found. The image may have been moved or deleted.';
+      } else if (errorMessage.includes('Failed to process image edits')) {
+        errorMessage = 'Failed to process image edits. Please try again with simpler edits.';
+      }
+      
       setError(errorMessage);
+      setHasUnsavedChanges(false); // Reset the flag on error
     }
   };
 

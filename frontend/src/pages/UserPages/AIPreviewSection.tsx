@@ -286,6 +286,13 @@ const AIPreviewSection: React.FC<AIPreviewSectionProps> = ({
                   <p className="file-info">
                     {file.layers} &bull; {file.dimensions} &bull; {file.dpi}
                   </p>
+                  <button
+                    className="edit-more-button"
+                    onClick={() => navigate(`/adjust-image?assetId=${file.id}`)}
+                    title="Edit and adjust this image"
+                  >
+                    <i className="fas fa-edit"></i> Edit More
+                  </button>
                 </div>
               </div>
             ))
