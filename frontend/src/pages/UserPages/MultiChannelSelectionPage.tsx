@@ -6,20 +6,8 @@ import { generation } from '../../services/generation';
 import { dashboard } from '../../services/dashboard';
 import { auth } from '../../services/auth';
 
-// Type definitions
-interface AssetFormat {
-  id: string;
-  name: string;
-  platformId: string;
-  platformName: string;
-  width: number;
-  height: number;
-}
-
-interface FormatsResponse {
-  resizing: AssetFormat[];
-  repurposing: AssetFormat[];
-}
+// Import types from central location
+import type { AssetFormat, FormatsResponse } from '../../types';
 
 interface ProvidersResponse {
   providers: string[];

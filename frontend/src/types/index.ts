@@ -96,12 +96,15 @@ export interface DetectedElement {
 export interface AssetFormat {
   id: string;
   name: string;
-  platform_id: string;
-  platform_name: string;
+  platformId: string;
+  platformName: string;
   width: number;
   height: number;
   description?: string;
   is_active?: boolean;
+  // Legacy fields for backward compatibility
+  platform_id?: string;
+  platform_name?: string;
 }
 
 export interface FormatsResponse {

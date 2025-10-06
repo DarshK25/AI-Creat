@@ -36,8 +36,8 @@ export const generation = {
           {
             id: 'instagram-post',
             name: 'Instagram Post',
-            platform_id: 'instagram',
-            platform_name: 'Instagram',
+            platformId: 'instagram',
+            platformName: 'Instagram',
             width: 1080,
             height: 1080,
             description: 'Square format for Instagram posts'
@@ -45,8 +45,8 @@ export const generation = {
           {
             id: 'instagram-story',
             name: 'Instagram Story',
-            platform_id: 'instagram',
-            platform_name: 'Instagram',
+            platformId: 'instagram',
+            platformName: 'Instagram',
             width: 1080,
             height: 1920,
             description: 'Vertical format for Instagram stories'
@@ -54,8 +54,8 @@ export const generation = {
           {
             id: 'facebook-post',
             name: 'Facebook Post',
-            platform_id: 'facebook',
-            platform_name: 'Facebook',
+            platformId: 'facebook',
+            platformName: 'Facebook',
             width: 1200,
             height: 630,
             description: 'Landscape format for Facebook posts'

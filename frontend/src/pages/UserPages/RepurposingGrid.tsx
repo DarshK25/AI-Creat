@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useApi } from '../../hooks/useApi';
 import { generation } from '../../services/generation';
 import type { AssetFormat, FormatsResponse } from '../../types';
 
@@ -20,8 +19,9 @@ const RepurposingGrid: React.FC<RepurposingGridProps> = ({
     const [repurposingData, setRepurposingData] = useState<PlatformData[]>([]);
     const [selectedItems, setSelectedItems] = useState<string[]>(initialSelection);
 
-    // API hook
-    const formatsApi = useApi(generation.getFormats);
+    // Loading and error states
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     // Notify parent component of selection changes
     useEffect(() => {
@@ -36,14 +36,16 @@ const RepurposingGrid: React.FC<RepurposingGridProps> = ({
     // Fetch formats on component mount
     useEffect(() => {
         const fetchFormats = async () => {
+            setLoading(true);
+            setError(null);
             try {
-                const response: FormatsResponse = await formatsApi.execute();
+                const response: FormatsResponse = await generation.getFormats();
 
                 // Group repurposing formats by platform
                 const platformMap = new Map<string, AssetFormat[]>();
 
                 response.repurposing?.forEach((format: AssetFormat) => {
-                    const platformName = format.platform_name || 'Other';
+                    const platformName = format.platformName || format.platform_name || 'Other';
                     if (!platformMap.has(platformName)) {
                         platformMap.set(platformName, []);
                     }
@@ -59,13 +61,16 @@ const RepurposingGrid: React.FC<RepurposingGridProps> = ({
                     .sort((a, b) => a.platform.localeCompare(b.platform));
 
                 setRepurposingData(platformsData);
-            } catch (error) {
-                console.error('Failed to fetch formats:', error);
+            } catch (err) {
+                console.error('Failed to fetch formats:', err);
+                setError('Failed to load formats. Please try again.');
+            } finally {
+                setLoading(false);
             }
         };
 
         fetchFormats();
-    }, [formatsApi]);
+    }, []); // Empty dependency array - only run once on mount
 
     // Generate a flat list of all possible item IDs for "Select All" functionality
     const allItemIds = useMemo(() =>
@@ -110,7 +115,7 @@ const RepurposingGrid: React.FC<RepurposingGridProps> = ({
     );
 
     // Loading state
-    if (formatsApi.loading) {
+    if (loading) {
         return (
             <div className="repurposing-container">
                 <div className="loading-state">
@@ -122,14 +127,14 @@ const RepurposingGrid: React.FC<RepurposingGridProps> = ({
     }
 
     // Error state
-    if (formatsApi.error) {
+    if (error) {
         return (
             <div className="repurposing-container">
                 <div className="error-state">
                     <i className="fas fa-exclamation-triangle"></i>
-                    <p>{formatsApi.error}</p>
+                    <p>{error}</p>
                     <button 
-                        onClick={() => formatsApi.execute()}
+                        onClick={() => window.location.reload()}
                         className="retry-button"
                     >
                         <i className="fas fa-redo"></i> Retry
